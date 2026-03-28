@@ -1,0 +1,322 @@
+import Foundation
+
+// MARK: - Request Models
+
+/// Request body for POST /v1/search
+struct SearchRequest: Codable, Sendable {
+    /// The search text (used for FTS5 full-text search over summaries).
+    let text: String
+
+    /// How far back to search, in minutes. Defaults to 1440 (24 hours).
+    let time_range_minutes: Int?
+
+    /// Maximum number of results to return. Defaults to 20.
+    let limit: Int?
+}
+
+// MARK: - Response Models
+
+/// A single citation from the user's screen activity.
+struct Citation: Codable, Sendable {
+    /// ISO 8601 timestamp of the source capture.
+    let timestamp: String
+
+    /// Application that was active.
+    let app_name: String
+
+    /// Window title visible at the time.
+    let window_title: String?
+
+    /// The specific text/content relevant to the query.
+    let relevant_text: String
+
+    /// Why this citation is relevant to the query.
+    let relevance_explanation: String
+
+    /// Source of this citation: "capture" or "summary".
+    let source: String
+}
+
+/// Metadata about how the query was processed.
+struct QueryResponseMetadata: Codable, Sendable {
+    /// The original query text.
+    let query: String
+
+    /// Time range searched, in minutes.
+    let time_range_minutes: Int
+
+    /// Wall-clock processing time in milliseconds.
+    let processing_time_ms: Int
+
+    /// Number of captures examined during retrieval.
+    let captures_examined: Int
+
+    /// Number of summaries searched during retrieval.
+    let summaries_searched: Int
+}
+
+/// Response body for POST /v1/search
+struct QueryResponse: Codable, Sendable {
+    /// Array of citations from the user's recent activity.
+    let citations: [Citation]
+
+    /// Processing metadata.
+    let metadata: QueryResponseMetadata
+}
+
+/// Health check response for GET /health
+struct HealthResponse: Codable, Sendable {
+    let status: String
+    let capture_count: Int?
+    let summary_count: Int?
+}
+
+// MARK: - Summaries Endpoint
+
+/// A single activity summary.
+struct SummaryItem: Codable, Sendable {
+    /// ISO 8601 start of the summarized window.
+    let start_timestamp: String
+
+    /// ISO 8601 end of the summarized window.
+    let end_timestamp: String
+
+    /// Applications involved in this activity window.
+    let app_names: [String]
+
+    /// LLM-generated summary text.
+    let summary: String
+
+    /// Key topics/entities extracted from this activity.
+    let key_topics: [String]
+}
+
+/// Response body for GET /v1/summaries
+struct SummariesResponse: Codable, Sendable {
+    let summaries: [SummaryItem]
+    let time_range_minutes: Int
+    let total: Int
+}
+
+// MARK: - Activity Endpoint
+
+/// A single activity entry (either a raw capture or a summary).
+struct ActivityItem: Codable, Sendable {
+    /// ISO 8601 timestamp.
+    let timestamp: String
+
+    /// Application name.
+    let app_name: String
+
+    /// Window title (available for captures, nil for summaries).
+    let window_title: String?
+
+    /// The content: OCR text for captures, summary text for summaries.
+    let text: String
+
+    /// "capture" or "summary"
+    let kind: String
+
+    /// For captures: "keyframe" or "delta". Nil for summaries.
+    let frame_type: String?
+
+    /// For captures: percentage of screen that changed (0.0-1.0). Nil for summaries.
+    let change_percentage: Double?
+}
+
+/// Response body for GET /v1/activity
+struct ActivityResponse: Codable, Sendable {
+    let activities: [ActivityItem]
+    let center_timestamp: String
+    let window_minutes: Int
+    let kind: String
+    let total: Int
+}
+
+// MARK: - Semantic Search Endpoint
+
+/// Request body for POST /v1/semantic-search
+struct SemanticSearchRequest: Codable, Sendable {
+    /// Natural language query for similarity matching against summaries.
+    let query: String
+
+    /// How far back to search, in minutes. Defaults to 1440 (24 hours).
+    let time_range_minutes: Int?
+
+    /// Maximum number of results to return. Defaults to 10.
+    let limit: Int?
+}
+
+/// A single semantic search result with similarity score.
+struct SemanticSearchResult: Codable, Sendable {
+    /// The matched summary.
+    let summary: SummaryItem
+
+    /// Cosine similarity score (0.0 to 1.0).
+    let similarity: Double
+}
+
+/// Response body for POST /v1/semantic-search
+struct SemanticSearchResponse: Codable, Sendable {
+    /// Results ranked by cosine similarity, descending.
+    let results: [SemanticSearchResult]
+
+    /// Processing metadata.
+    let metadata: SemanticSearchMetadata
+}
+
+/// Metadata for the semantic search response.
+struct SemanticSearchMetadata: Codable, Sendable {
+    /// The original query text.
+    let query: String
+
+    /// Time range searched, in minutes.
+    let time_range_minutes: Int
+
+    /// Wall-clock processing time in milliseconds.
+    let processing_time_ms: Int
+
+    /// Number of summaries with embeddings that were compared.
+    let summaries_compared: Int
+}
+
+// MARK: - Sessions Endpoint
+
+/// A single app session entry.
+struct SessionItem: Codable, Sendable {
+    let id: Int64
+    let app_name: String
+    let app_bundle_id: String?
+    let start_timestamp: String
+    let end_timestamp: String
+    let capture_count: Int
+    let window_titles: [String]
+    let document_paths: [String]
+    let browser_urls: [String]
+}
+
+/// Response body for GET /v1/sessions
+struct SessionsResponse: Codable, Sendable {
+    let sessions: [SessionItem]
+    let time_range_minutes: Int
+    let total: Int
+}
+
+// MARK: - App Usage Endpoint
+
+/// A single app usage aggregation entry.
+struct AppUsageItem: Codable, Sendable {
+    let app_name: String
+    let total_seconds: Double
+    let session_count: Int
+}
+
+/// Response body for GET /v1/app-usage
+struct AppUsageResponse: Codable, Sendable {
+    let usage: [AppUsageItem]
+    let time_range_minutes: Int
+}
+
+/// Error response body.
+struct APIErrorResponse: Codable, Sendable {
+    let error: String
+    let detail: String?
+}
+
+// MARK: - Inferred Activities Endpoint
+
+/// A single inferred activity entry (distinct from ActivityItem used by /v1/activity).
+struct InferredActivityItem: Codable, Sendable {
+    let id: Int64
+    let name: String
+    let description: String?
+    let start_timestamp: String
+    let end_timestamp: String
+    let key_topics: [String]
+    let document_paths: [String]
+    let browser_urls: [String]
+    let confidence: Double
+    let is_active: Bool
+}
+
+/// Response body for GET /v1/activities
+struct ActivitiesResponse: Codable, Sendable {
+    let activities: [InferredActivityItem]
+    let time_range_minutes: Int
+    let total: Int
+}
+
+/// A link between two activities in the activity graph.
+struct ActivityLinkItem: Codable, Sendable {
+    let id: Int64
+    let source_activity_id: Int64
+    let target_activity_id: Int64
+    let link_type: String
+    let weight: Double
+    let shared_entity: String?
+}
+
+/// Response body for GET /v1/graph
+struct ActivityGraphResponse: Codable, Sendable {
+    let activities: [InferredActivityItem]
+    let links: [ActivityLinkItem]
+    let time_range_minutes: Int
+}
+
+/// Response body for GET /v1/entities
+struct EntityQueryResponse: Codable, Sendable {
+    let entity_type: String
+    let entity_value: String
+    let activities: [InferredActivityItem]
+}
+
+// MARK: - Focus Endpoint
+
+struct FocusStateItem: Codable, Sendable {
+    let id: String
+    let task: String
+    let task_slug: String?
+    let started_at: String
+    let done_when: String?
+    let artifact_goal: String?
+    let artifact: String?
+    let drift_budget_minutes: Int?
+    let source: String?
+    let status: String?
+}
+
+struct FocusBlockItem: Codable, Sendable {
+    let id: String
+    let task: String
+    let task_slug: String?
+    let started_at: String
+    let ended_at: String?
+    let done_when: String?
+    let artifact_goal: String?
+    let artifact: String?
+    let drift_budget_minutes: Int?
+    let score: Int?
+    let notes: String?
+    let source: String?
+    let status: String?
+}
+
+struct FocusDriftItem: Codable, Sendable {
+    let level: String
+    let fragmentation_score: Int
+    let session_count: Int
+    let app_count: Int
+    let browser_ratio: Double
+    let elapsed_minutes: Int
+    let reasons: [String]
+}
+
+struct FocusStatusResponse: Codable, Sendable {
+    let current: FocusStateItem?
+    let drift: FocusDriftItem?
+}
+
+struct FocusBlocksResponse: Codable, Sendable {
+    let blocks: [FocusBlockItem]
+    let total: Int
+}
