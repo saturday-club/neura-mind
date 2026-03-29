@@ -4,6 +4,8 @@ The average person with ADHD loses hours to context-switching and executive dysf
 
 This project was built as part of the Claude Builder Club Hackathon @ IU on March 29, 2026.
 
+Demo Video: https://youtu.be/z3_eFS4P9w8
+
 ![NeuraMind Screenshot](screenshot.png)
 
 ## What NeuraMind Does
