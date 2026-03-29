@@ -4,12 +4,24 @@
 
 PRODUCT     := NeuraMind
 BUNDLE_ID   := com.neuramind.app
+VERSION     := 0.2.0
+BUILD_NUMBER := 1
 BUILD_DIR   := .build
+DIST_DIR    := dist
+ARCH        := $(shell uname -m)
 DEBUG_BIN   := $(BUILD_DIR)/debug/$(PRODUCT)
 RELEASE_BIN := $(BUILD_DIR)/release/$(PRODUCT)
 APP_BUNDLE  := $(BUILD_DIR)/$(PRODUCT).app
+RELEASE_APP_BUNDLE := $(DIST_DIR)/$(PRODUCT).app
+DMG_STAGING_DIR := $(DIST_DIR)/$(PRODUCT)-dmg
+DMG_FILE    := $(DIST_DIR)/$(PRODUCT)-$(VERSION)-$(ARCH).dmg
 DB_PATH     := $(HOME)/Library/Application Support/NeuraMind/neuramind.sqlite
 SIGN_ID     := Apple Development: saaivignesh20@gmail.com (F7Q59S24D2)
+ICON_SOURCE := Resources/contextd.icns
+ICON_BUNDLE_NAME := neuramind.icns
+CLANG_MODULE_CACHE := $(CURDIR)/$(BUILD_DIR)/clang-module-cache
+SWIFTPM_MODULE_CACHE := $(CURDIR)/$(BUILD_DIR)/swiftpm-module-cache
+SWIFT_ENV := CLANG_MODULE_CACHE_PATH="$(CLANG_MODULE_CACHE)" SWIFTPM_MODULECACHE_OVERRIDE="$(SWIFTPM_MODULE_CACHE)"
 
 # Colors
 GREEN  := \033[0;32m
@@ -20,7 +32,7 @@ RESET  := \033[0m
 
 .PHONY: help build release run clean resolve lint test benchmark db-shell db-stats db-recent db-search \
         db-keyframes reset-permissions reset-db logs install install-app uninstall check-permissions watch \
-        setup-cert
+        setup-cert ensure-debug-bin bundle bundle-release run-bundle dmg
 
 # Sign a bundle: tries SIGN_ID cert first, falls back to ad-hoc.
 # Using a stable cert preserves macOS permissions (Screen Recording, Accessibility)
@@ -55,22 +67,27 @@ help: ## Show this help
 
 build: ## Build debug binary
 	@echo "$(CYAN)Building debug...$(RESET)"
-	@swift build 2>&1
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift build 2>&1
 	@echo "$(GREEN)Build complete: $(DEBUG_BIN)$(RESET)"
 
 release: ## Build optimized release binary
 	@echo "$(CYAN)Building release...$(RESET)"
-	@swift build -c release 2>&1
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift build -c release 2>&1
 	@echo "$(GREEN)Release build complete: $(RELEASE_BIN)$(RESET)"
 
 resolve: ## Resolve Swift package dependencies
 	@echo "$(CYAN)Resolving packages...$(RESET)"
-	@swift package resolve
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift package resolve
 
 clean: ## Remove build artifacts
 	@echo "$(YELLOW)Cleaning build directory...$(RESET)"
-	@swift package clean
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift package clean
 	@rm -rf $(BUILD_DIR)
+	@rm -rf $(DIST_DIR)
 	@echo "$(GREEN)Clean.$(RESET)"
 
 # ─────────────────────────────────────────
@@ -98,7 +115,8 @@ watch: ## Rebuild on file changes (requires fswatch: brew install fswatch)
 	@fswatch -o -r NeuraMind/ --include '\.swift$$' --exclude '.*' | while read -r _; do \
 		echo ""; \
 		echo "$(YELLOW)Change detected, rebuilding...$(RESET)"; \
-		swift build 2>&1; \
+		mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"; \
+		$(SWIFT_ENV) swift build 2>&1; \
 		if [ $$? -eq 0 ]; then \
 			echo "$(GREEN)Build succeeded$(RESET)"; \
 		else \
@@ -108,18 +126,21 @@ watch: ## Rebuild on file changes (requires fswatch: brew install fswatch)
 
 test: ## Run unit tests
 	@echo "$(CYAN)Running tests...$(RESET)"
-	@swift test 2>&1
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift test 2>&1
 	@echo "$(GREEN)Tests complete.$(RESET)"
 
 benchmark: ## Run ImageDiffer benchmarks (scalar vs SIMD)
 	@echo "$(CYAN)Running ImageDiffer benchmarks...$(RESET)"
-	@swift test --filter "ImageDifferTests/testBenchmark" 2>&1
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift test --filter "ImageDifferTests/testBenchmark" 2>&1
 	@echo "$(GREEN)Benchmarks complete.$(RESET)"
 
 lint: ## Check for common issues (unused imports, formatting)
 	@echo "$(CYAN)Checking for issues...$(RESET)"
 	@echo "--- Unused variables ---"
-	@swift build 2>&1 | grep -i "warning:" || echo "  No warnings."
+	@mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"
+	@$(SWIFT_ENV) swift build 2>&1 | grep -i "warning:" || echo "  No warnings."
 	@echo ""
 	@echo "--- TODO/FIXME markers ---"
 	@grep -rn "TODO\|FIXME\|HACK\|XXX" NeuraMind/ --include="*.swift" || echo "  None found."
@@ -312,7 +333,7 @@ logs-errors: ## Show only error-level log entries
 #  App Bundle (for proper permissions)
 # ─────────────────────────────────────────
 
-bundle: build ## Create a .app bundle (needed for proper permission prompts)
+bundle: ensure-debug-bin ## Create a .app bundle (needed for proper permission prompts)
 	@echo "$(CYAN)Creating app bundle...$(RESET)"
 	@killall $(PRODUCT) 2>/dev/null || true
 	@sleep 0.5
@@ -320,17 +341,61 @@ bundle: build ## Create a .app bundle (needed for proper permission prompts)
 	@mkdir -p "$(APP_BUNDLE)/Contents/MacOS"
 	@mkdir -p "$(APP_BUNDLE)/Contents/Resources"
 	@cp $(DEBUG_BIN) "$(APP_BUNDLE)/Contents/MacOS/$(PRODUCT)"
-	@./scripts/gen-info-plist.sh > "$(APP_BUNDLE)/Contents/Info.plist"
-	@if [ -f Resources/neuramind.icns ]; then \
-		cp Resources/neuramind.icns "$(APP_BUNDLE)/Contents/Resources/neuramind.icns"; \
+	@PRODUCT_NAME="$(PRODUCT)" \
+	PRODUCT_EXECUTABLE="$(PRODUCT)" \
+	BUNDLE_ID="$(BUNDLE_ID)" \
+	APP_VERSION="$(VERSION)" \
+	APP_BUILD="$(BUILD_NUMBER)" \
+	ICON_BASENAME="$(basename $(ICON_BUNDLE_NAME))" \
+	./scripts/gen-info-plist.sh > "$(APP_BUNDLE)/Contents/Info.plist"
+	@if [ -f "$(ICON_SOURCE)" ]; then \
+		cp "$(ICON_SOURCE)" "$(APP_BUNDLE)/Contents/Resources/$(ICON_BUNDLE_NAME)"; \
 		echo "  $(GREEN)Icon installed$(RESET)"; \
 	fi
 	@$(call sign_bundle,$(APP_BUNDLE))
 	@echo "$(GREEN)App bundle created: $(APP_BUNDLE)$(RESET)"
 
+bundle-release: release ## Create a signed release .app bundle in dist/
+	@echo "$(CYAN)Creating release app bundle...$(RESET)"
+	@rm -rf "$(RELEASE_APP_BUNDLE)"
+	@mkdir -p "$(RELEASE_APP_BUNDLE)/Contents/MacOS"
+	@mkdir -p "$(RELEASE_APP_BUNDLE)/Contents/Resources"
+	@cp "$(RELEASE_BIN)" "$(RELEASE_APP_BUNDLE)/Contents/MacOS/$(PRODUCT)"
+	@PRODUCT_NAME="$(PRODUCT)" \
+	PRODUCT_EXECUTABLE="$(PRODUCT)" \
+	BUNDLE_ID="$(BUNDLE_ID)" \
+	APP_VERSION="$(VERSION)" \
+	APP_BUILD="$(BUILD_NUMBER)" \
+	ICON_BASENAME="$(basename $(ICON_BUNDLE_NAME))" \
+	./scripts/gen-info-plist.sh > "$(RELEASE_APP_BUNDLE)/Contents/Info.plist"
+	@if [ -f "$(ICON_SOURCE)" ]; then \
+		cp "$(ICON_SOURCE)" "$(RELEASE_APP_BUNDLE)/Contents/Resources/$(ICON_BUNDLE_NAME)"; \
+		echo "  $(GREEN)Icon installed$(RESET)"; \
+	fi
+	@$(call sign_bundle,$(RELEASE_APP_BUNDLE))
+	@echo "$(GREEN)Release app bundle created: $(RELEASE_APP_BUNDLE)$(RESET)"
+
 run-bundle: bundle ## Build app bundle and launch it
 	@echo "$(CYAN)Launching $(APP_BUNDLE)...$(RESET)"
 	@open "$(APP_BUNDLE)"
+
+dmg: bundle-release ## Create a distributable DMG for Homebrew cask releases
+	@echo "$(CYAN)Packaging DMG...$(RESET)"
+	@rm -rf "$(DMG_STAGING_DIR)"
+	@mkdir -p "$(DMG_STAGING_DIR)"
+	@ditto "$(RELEASE_APP_BUNDLE)" "$(DMG_STAGING_DIR)/$(PRODUCT).app"
+	@ln -s /Applications "$(DMG_STAGING_DIR)/Applications"
+	@rm -f "$(DMG_FILE)"
+	@hdiutil create \
+		-volname "$(PRODUCT)" \
+		-srcfolder "$(DMG_STAGING_DIR)" \
+		-fs HFS+ \
+		-format UDZO \
+		-imagekey zlib-level=9 \
+		"$(DMG_FILE)" >/dev/null
+	@echo "$(GREEN)DMG created: $(DMG_FILE)$(RESET)"
+	@echo "$(CYAN)SHA256:$(RESET)"
+	@shasum -a 256 "$(DMG_FILE)"
 
 # ─────────────────────────────────────────
 #  Install
@@ -350,9 +415,15 @@ install-app: build ## Build, install to /Applications/NeuraMind.app, and launch 
 	@mkdir -p "$(INSTALLED_APP)/Contents/MacOS"
 	@mkdir -p "$(INSTALLED_APP)/Contents/Resources"
 	@cp $(DEBUG_BIN) "$(INSTALLED_APP)/Contents/MacOS/$(PRODUCT)"
-	@./scripts/gen-info-plist.sh > "$(INSTALLED_APP)/Contents/Info.plist"
-	@if [ -f Resources/neuramind.icns ]; then \
-		cp Resources/neuramind.icns "$(INSTALLED_APP)/Contents/Resources/neuramind.icns"; \
+	@PRODUCT_NAME="$(PRODUCT)" \
+	PRODUCT_EXECUTABLE="$(PRODUCT)" \
+	BUNDLE_ID="$(BUNDLE_ID)" \
+	APP_VERSION="$(VERSION)" \
+	APP_BUILD="$(BUILD_NUMBER)" \
+	ICON_BASENAME="$(basename $(ICON_BUNDLE_NAME))" \
+	./scripts/gen-info-plist.sh > "$(INSTALLED_APP)/Contents/Info.plist"
+	@if [ -f "$(ICON_SOURCE)" ]; then \
+		cp "$(ICON_SOURCE)" "$(INSTALLED_APP)/Contents/Resources/$(ICON_BUNDLE_NAME)"; \
 	fi
 	$(call sign_bundle,$(INSTALLED_APP))
 	@echo "$(GREEN)Installed. Launching...$(RESET)"
@@ -367,18 +438,18 @@ setup-cert: ## One-time: create a self-signed cert for code signing (preserves m
 		echo "$(GREEN)Certificate '$(SIGN_ID)' already exists. Nothing to do.$(RESET)"; \
 	else \
 		echo "$(CYAN)Creating self-signed certificate '$(SIGN_ID)'...$(RESET)"; \
-		cat > /tmp/neuramind-cert.conf <<-CERTEOF && \
-		[ req ] \
-		default_bits       = 2048 \
-		distinguished_name = dn \
-		x509_extensions    = codesign \
-		prompt             = no \
-		[ dn ] \
-		CN = $(SIGN_ID) \
-		[ codesign ] \
-		keyUsage = digitalSignature \
-		extendedKeyUsage = codeSigning \
-		CERTEOF \
+		printf '%s\n' \
+			'[ req ]' \
+			'default_bits = 2048' \
+			'distinguished_name = dn' \
+			'x509_extensions = codesign' \
+			'prompt = no' \
+			'[ dn ]' \
+			'CN = $(SIGN_ID)' \
+			'[ codesign ]' \
+			'keyUsage = digitalSignature' \
+			'extendedKeyUsage = codeSigning' \
+			> /tmp/neuramind-cert.conf && \
 		openssl req -x509 -newkey rsa:2048 -nodes \
 			-keyout /tmp/neuramind-cert.key \
 			-out /tmp/neuramind-cert.pem \
@@ -386,11 +457,20 @@ setup-cert: ## One-time: create a self-signed cert for code signing (preserves m
 		openssl pkcs12 -export -inkey /tmp/neuramind-cert.key \
 			-in /tmp/neuramind-cert.pem \
 			-out /tmp/neuramind-cert.p12 \
-			-passout pass: -name "$(SIGN_ID)" 2>/dev/null && \
+			-legacy \
+			-passout pass:neuramind-cert -name "$(SIGN_ID)" 2>/dev/null && \
 		security import /tmp/neuramind-cert.p12 \
 			-k ~/Library/Keychains/login.keychain-db \
+			-P neuramind-cert \
 			-T /usr/bin/codesign 2>/dev/null && \
 		rm -f /tmp/neuramind-cert.conf /tmp/neuramind-cert.key /tmp/neuramind-cert.pem /tmp/neuramind-cert.p12 && \
 		echo "$(GREEN)Certificate '$(SIGN_ID)' created and imported.$(RESET)" && \
 		echo "$(YELLOW)You may need to open Keychain Access, find '$(SIGN_ID)', and set Trust → Code Signing → Always Trust.$(RESET)"; \
+	fi
+# Ensure a debug build exists before packaging it into an app bundle.
+ensure-debug-bin:
+	@if [ ! -x "$(DEBUG_BIN)" ]; then \
+		echo "$(YELLOW)Debug binary not found at $(DEBUG_BIN). Running swift build first...$(RESET)"; \
+		mkdir -p "$(CLANG_MODULE_CACHE)" "$(SWIFTPM_MODULE_CACHE)"; \
+		$(SWIFT_ENV) swift build 2>&1 || exit $$?; \
 	fi

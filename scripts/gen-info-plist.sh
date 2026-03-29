@@ -2,7 +2,20 @@
 # gen-info-plist.sh — Generate Info.plist for the .app bundle.
 # Used by `make bundle`.
 
-cat <<'EOF'
+product_name="${PRODUCT_NAME:-NeuraMind}"
+product_executable="${PRODUCT_EXECUTABLE:-$product_name}"
+bundle_id="${BUNDLE_ID:-com.neuramind.app}"
+app_version="${APP_VERSION:-0.2.0}"
+app_build="${APP_BUILD:-1}"
+icon_basename="${ICON_BASENAME:-neuramind}"
+
+cat <<'EOF' | sed \
+    -e "s#__PRODUCT_NAME__#${product_name}#g" \
+    -e "s#__PRODUCT_EXECUTABLE__#${product_executable}#g" \
+    -e "s#__BUNDLE_ID__#${bundle_id}#g" \
+    -e "s#__APP_VERSION__#${app_version}#g" \
+    -e "s#__APP_BUILD__#${app_build}#g" \
+    -e "s#__ICON_BASENAME__#${icon_basename}#g"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -11,19 +24,19 @@ cat <<'EOF'
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>NeuraMind</string>
+    <string>__PRODUCT_EXECUTABLE__</string>
     <key>CFBundleIdentifier</key>
-    <string>com.neuramind.app</string>
+    <string>__BUNDLE_ID__</string>
     <key>CFBundleName</key>
-    <string>NeuraMind</string>
+    <string>__PRODUCT_NAME__</string>
     <key>CFBundleDisplayName</key>
-    <string>NeuraMind</string>
+    <string>__PRODUCT_NAME__</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.2.0</string>
+    <string>__APP_VERSION__</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>__APP_BUILD__</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>LSMinimumSystemVersion</key>
@@ -31,7 +44,7 @@ cat <<'EOF'
     <key>LSUIElement</key>
     <true/>
     <key>CFBundleIconFile</key>
-    <string>neuramind</string>
+    <string>__ICON_BASENAME__</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
