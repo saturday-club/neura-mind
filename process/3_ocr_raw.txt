@@ -18,17 +18,17 @@ Fri 4:34
 1
 md files remaining
 ... +9 lines (ctrl+o to expand)
-• Bash(rm -f~/Documents/contextd-vault/2026-03-20.md
+• Bash(rm -f~/Documents/neuramind-vault/2026-03-20.md
 echo "Clean vault. O notes.")
 L Clean vault. 0 notes.
 • Now create the process audit pipeline. This will capture one full cycle and save every intermediate artifact:
-• Bash(mkdir -p /Users/amit/contextd/process
-1s /Users/amit/contextd/process/)
+• Bash(mkdir -p /Users/amit/neuramind/process
+1s /Users/amit/neuramind/process/)
 L (No output)
 • Write(process/audit_pipeline.py)
 L Wrote 275 lines to process/audit_pipeline.py
 2
-"""Audit the contextd pipeline by capturing one full cycle's artifacts.
+"""Audit the neuramind pipeline by capturing one full cycle's artifacts.
 3 Saves intermediate outputs from each stage to process/ folder:
 4
 1_screenshot.png
@@ -56,4 +56,4 @@ lines (ctrl+o to expand)
 L Running...
 + Recombobulating... (1m 34s • \ 3.0k tokens)
 • accept edits on • 1 bash
-amit Amits-MacBook-Pro /contextd (community-improvements) Sonnet .. 8% until auto-compact • /model sonnet[1m Remote Control re.
+amit Amits-MacBook-Pro /neuramind (community-improvements) Sonnet .. 8% until auto-compact • /model sonnet[1m Remote Control re.

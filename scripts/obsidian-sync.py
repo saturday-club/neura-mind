@@ -1,6 +1,6 @@
-"""Sync autolog activity data to an Obsidian vault with wikilinks.
+"""Sync neuramind activity data to an Obsidian vault with wikilinks.
 
-Fetches from the autolog API (activities, sessions, app-usage, graph)
+Fetches from the neuramind API (activities, sessions, app-usage, graph)
 and writes Activity/App/Topic/Daily notes with [[wikilinks]] so that
 Obsidian's graph view visualizes the connections.
 
@@ -36,9 +36,9 @@ from obsidian_helpers import (
 )
 from obsidian_legacy import run_legacy_sync
 
-AUTOLOG_URL = "http://127.0.0.1:21890"
-AUTH_TOKEN_PATH = Path.home() / ".config" / "autolog" / "auth_token"
-VAULT_PATH = Path.home() / "Documents" / "autolog-vault"
+NEURAMIND_URL = "http://127.0.0.1:21890"
+AUTH_TOKEN_PATH = Path.home() / ".config" / "neuramind" / "auth_token"
+VAULT_PATH = Path.home() / "Documents" / "neuramind-vault"
 HTTP_TIMEOUT = 15
 DEFAULT_HOURS = 2
 MAX_FILENAME_LEN = 80
@@ -57,7 +57,7 @@ logging.basicConfig(
 
 
 def read_auth_token() -> str:
-    """Read autolog bearer token from ~/.config/autolog/auth_token."""
+    """Read neuramind bearer token from ~/.config/neuramind/auth_token."""
     try:
         return AUTH_TOKEN_PATH.read_text(encoding="utf-8").strip()
     except (OSError, FileNotFoundError) as exc:
@@ -71,8 +71,8 @@ def read_auth_token() -> str:
 
 
 def _api_get(token: str, path: str) -> dict | list | None:
-    """GET from the autolog API. Returns None on any error."""
-    url = f"{AUTOLOG_URL}{path}"
+    """GET from the neuramind API. Returns None on any error."""
+    url = f"{NEURAMIND_URL}{path}"
     req = urllib.request.Request(url, method="GET")
     req.add_header("Authorization", f"Bearer {token}")
     try:

@@ -1,15 +1,15 @@
-# ContextD — Build & Development Makefile
+# NeuraMind — Build & Development Makefile
 # Usage: make <target>
 # Run `make help` to see all available targets.
 
-PRODUCT     := ContextD
-BUNDLE_ID   := com.contextd.app
+PRODUCT     := NeuraMind
+BUNDLE_ID   := com.neuramind.app
 BUILD_DIR   := .build
 DEBUG_BIN   := $(BUILD_DIR)/debug/$(PRODUCT)
 RELEASE_BIN := $(BUILD_DIR)/release/$(PRODUCT)
 APP_BUNDLE  := $(BUILD_DIR)/$(PRODUCT).app
-DB_PATH     := $(HOME)/Library/Application Support/ContextD/contextd.sqlite
-SIGN_ID     := ContextD Dev
+DB_PATH     := $(HOME)/Library/Application Support/NeuraMind/neuramind.sqlite
+SIGN_ID     := Apple Development: saaivignesh20@gmail.com (F7Q59S24D2)
 
 # Colors
 GREEN  := \033[0;32m
@@ -27,12 +27,12 @@ RESET  := \033[0m
 # across rebuilds. Ad-hoc signing generates a new identity each time, which resets them.
 define sign_bundle
 	@if codesign --force --deep --sign "$(SIGN_ID)" \
-		--entitlements Resources/ContextD.entitlements \
+		--entitlements Resources/NeuraMind.entitlements \
 		$(1) 2>/dev/null; then \
 		echo "  $(GREEN)Signed with $(SIGN_ID)$(RESET)"; \
 	else \
 		codesign --force --deep --sign - \
-			--entitlements Resources/ContextD.entitlements \
+			--entitlements Resources/NeuraMind.entitlements \
 			$(1) 2>/dev/null; \
 		echo "  $(YELLOW)Ad-hoc signed (run 'make setup-cert' once to preserve permissions across rebuilds)$(RESET)"; \
 	fi
@@ -43,7 +43,7 @@ endef
 # ─────────────────────────────────────────
 
 help: ## Show this help
-	@echo "$(CYAN)ContextD Development Commands$(RESET)"
+	@echo "$(CYAN)NeuraMind Development Commands$(RESET)"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(RESET) %s\n", $$1, $$2}'
@@ -80,12 +80,12 @@ clean: ## Remove build artifacts
 run: install-app ## Build, install to /Applications, and launch (preserves permissions)
 
 run-debug: build ## Run raw debug binary (no macOS permissions — for quick iteration)
-	@echo "$(CYAN)Running ContextD (raw binary, no permissions)...$(RESET)"
+	@echo "$(CYAN)Running NeuraMind (raw binary, no permissions)...$(RESET)"
 	@echo "$(YELLOW)Press Ctrl+C to stop$(RESET)"
 	@$(DEBUG_BIN)
 
 run-release: release ## Build and run (release)
-	@echo "$(CYAN)Running ContextD (release)...$(RESET)"
+	@echo "$(CYAN)Running NeuraMind (release)...$(RESET)"
 	@$(RELEASE_BIN)
 
 # ─────────────────────────────────────────
@@ -95,7 +95,7 @@ run-release: release ## Build and run (release)
 watch: ## Rebuild on file changes (requires fswatch: brew install fswatch)
 	@command -v fswatch >/dev/null 2>&1 || { echo "$(RED)fswatch not found. Install with: brew install fswatch$(RESET)"; exit 1; }
 	@echo "$(CYAN)Watching for changes... (Ctrl+C to stop)$(RESET)"
-	@fswatch -o -r ContextD/ --include '\.swift$$' --exclude '.*' | while read -r _; do \
+	@fswatch -o -r NeuraMind/ --include '\.swift$$' --exclude '.*' | while read -r _; do \
 		echo ""; \
 		echo "$(YELLOW)Change detected, rebuilding...$(RESET)"; \
 		swift build 2>&1; \
@@ -122,18 +122,18 @@ lint: ## Check for common issues (unused imports, formatting)
 	@swift build 2>&1 | grep -i "warning:" || echo "  No warnings."
 	@echo ""
 	@echo "--- TODO/FIXME markers ---"
-	@grep -rn "TODO\|FIXME\|HACK\|XXX" ContextD/ --include="*.swift" || echo "  None found."
+	@grep -rn "TODO\|FIXME\|HACK\|XXX" NeuraMind/ --include="*.swift" || echo "  None found."
 	@echo ""
 	@echo "--- File sizes ---"
-	@find ContextD -name "*.swift" -exec wc -l {} + | sort -rn | head -15
+	@find NeuraMind -name "*.swift" -exec wc -l {} + | sort -rn | head -15
 
 loc: ## Count lines of code
 	@echo "$(CYAN)Lines of code:$(RESET)"
-	@find ContextD -name "*.swift" -exec cat {} + | wc -l | xargs echo "  Total Swift lines:"
+	@find NeuraMind -name "*.swift" -exec cat {} + | wc -l | xargs echo "  Total Swift lines:"
 	@echo ""
 	@echo "$(CYAN)By directory:$(RESET)"
 	@for dir in App Capture Storage Summarization Enrichment LLMClient UI Permissions Utilities; do \
-		count=$$(find ContextD/$$dir -name "*.swift" -exec cat {} + 2>/dev/null | wc -l | tr -d ' '); \
+		count=$$(find NeuraMind/$$dir -name "*.swift" -exec cat {} + 2>/dev/null | wc -l | tr -d ' '); \
 		printf "  %-20s %s lines\n" "$$dir/" "$$count"; \
 	done
 
@@ -141,7 +141,7 @@ loc: ## Count lines of code
 #  Database
 # ─────────────────────────────────────────
 
-db-shell: ## Open SQLite shell on the ContextD database
+db-shell: ## Open SQLite shell on the NeuraMind database
 	@if [ -f "$(DB_PATH)" ]; then \
 		echo "$(CYAN)Opening database: $(DB_PATH)$(RESET)"; \
 		sqlite3 "$(DB_PATH)"; \
@@ -254,7 +254,7 @@ db-keyframes: ## Show keyframes with delta counts
 # ─────────────────────────────────────────
 
 check-permissions: ## Check if required macOS permissions are granted
-	@echo "$(CYAN)Checking permissions for ContextD...$(RESET)"
+	@echo "$(CYAN)Checking permissions for NeuraMind...$(RESET)"
 	@echo ""
 	@echo "Screen Recording:"
 	@if sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
@@ -296,17 +296,17 @@ reset-db: ## Delete the local database (destructive!)
 #  Logs
 # ─────────────────────────────────────────
 
-logs: ## Stream ContextD logs from unified logging (live)
-	@echo "$(CYAN)Streaming logs for com.contextd.app... (Ctrl+C to stop)$(RESET)"
-	@log stream --predicate 'subsystem == "com.contextd.app"' --style compact
+logs: ## Stream NeuraMind logs from unified logging (live)
+	@echo "$(CYAN)Streaming logs for com.neuramind.app... (Ctrl+C to stop)$(RESET)"
+	@log stream --predicate 'subsystem == "com.neuramind.app"' --style compact
 
-logs-recent: ## Show recent ContextD log entries
-	@echo "$(CYAN)Recent logs for com.contextd.app:$(RESET)"
-	@log show --predicate 'subsystem == "com.contextd.app"' --style compact --last 5m
+logs-recent: ## Show recent NeuraMind log entries
+	@echo "$(CYAN)Recent logs for com.neuramind.app:$(RESET)"
+	@log show --predicate 'subsystem == "com.neuramind.app"' --style compact --last 5m
 
 logs-errors: ## Show only error-level log entries
-	@echo "$(RED)Error logs for com.contextd.app:$(RESET)"
-	@log show --predicate 'subsystem == "com.contextd.app" AND messageType == error' --style compact --last 1h
+	@echo "$(RED)Error logs for com.neuramind.app:$(RESET)"
+	@log show --predicate 'subsystem == "com.neuramind.app" AND messageType == error' --style compact --last 1h
 
 # ─────────────────────────────────────────
 #  App Bundle (for proper permissions)
@@ -321,8 +321,8 @@ bundle: build ## Create a .app bundle (needed for proper permission prompts)
 	@mkdir -p "$(APP_BUNDLE)/Contents/Resources"
 	@cp $(DEBUG_BIN) "$(APP_BUNDLE)/Contents/MacOS/$(PRODUCT)"
 	@./scripts/gen-info-plist.sh > "$(APP_BUNDLE)/Contents/Info.plist"
-	@if [ -f Resources/contextd.icns ]; then \
-		cp Resources/contextd.icns "$(APP_BUNDLE)/Contents/Resources/contextd.icns"; \
+	@if [ -f Resources/neuramind.icns ]; then \
+		cp Resources/neuramind.icns "$(APP_BUNDLE)/Contents/Resources/neuramind.icns"; \
 		echo "  $(GREEN)Icon installed$(RESET)"; \
 	fi
 	@$(call sign_bundle,$(APP_BUNDLE))
@@ -341,9 +341,9 @@ install: release ## Install release binary to /usr/local/bin
 	@cp $(RELEASE_BIN) /usr/local/bin/$(PRODUCT)
 	@echo "$(GREEN)Installed. Run with: $(PRODUCT)$(RESET)"
 
-INSTALLED_APP := /Applications/AutoLog.app
+INSTALLED_APP := /Applications/NeuraMind.app
 
-install-app: build ## Build, install to /Applications/AutoLog.app, and launch (preserves permissions)
+install-app: build ## Build, install to /Applications/NeuraMind.app, and launch (preserves permissions)
 	@echo "$(CYAN)Installing to $(INSTALLED_APP)...$(RESET)"
 	@killall $(PRODUCT) 2>/dev/null || true
 	@sleep 0.5
@@ -351,8 +351,8 @@ install-app: build ## Build, install to /Applications/AutoLog.app, and launch (p
 	@mkdir -p "$(INSTALLED_APP)/Contents/Resources"
 	@cp $(DEBUG_BIN) "$(INSTALLED_APP)/Contents/MacOS/$(PRODUCT)"
 	@./scripts/gen-info-plist.sh > "$(INSTALLED_APP)/Contents/Info.plist"
-	@if [ -f Resources/contextd.icns ]; then \
-		cp Resources/contextd.icns "$(INSTALLED_APP)/Contents/Resources/contextd.icns"; \
+	@if [ -f Resources/neuramind.icns ]; then \
+		cp Resources/neuramind.icns "$(INSTALLED_APP)/Contents/Resources/neuramind.icns"; \
 	fi
 	$(call sign_bundle,$(INSTALLED_APP))
 	@echo "$(GREEN)Installed. Launching...$(RESET)"
@@ -367,7 +367,7 @@ setup-cert: ## One-time: create a self-signed cert for code signing (preserves m
 		echo "$(GREEN)Certificate '$(SIGN_ID)' already exists. Nothing to do.$(RESET)"; \
 	else \
 		echo "$(CYAN)Creating self-signed certificate '$(SIGN_ID)'...$(RESET)"; \
-		cat > /tmp/contextd-cert.conf <<-CERTEOF && \
+		cat > /tmp/neuramind-cert.conf <<-CERTEOF && \
 		[ req ] \
 		default_bits       = 2048 \
 		distinguished_name = dn \
@@ -380,17 +380,17 @@ setup-cert: ## One-time: create a self-signed cert for code signing (preserves m
 		extendedKeyUsage = codeSigning \
 		CERTEOF \
 		openssl req -x509 -newkey rsa:2048 -nodes \
-			-keyout /tmp/contextd-cert.key \
-			-out /tmp/contextd-cert.pem \
-			-days 3650 -config /tmp/contextd-cert.conf 2>/dev/null && \
-		openssl pkcs12 -export -inkey /tmp/contextd-cert.key \
-			-in /tmp/contextd-cert.pem \
-			-out /tmp/contextd-cert.p12 \
+			-keyout /tmp/neuramind-cert.key \
+			-out /tmp/neuramind-cert.pem \
+			-days 3650 -config /tmp/neuramind-cert.conf 2>/dev/null && \
+		openssl pkcs12 -export -inkey /tmp/neuramind-cert.key \
+			-in /tmp/neuramind-cert.pem \
+			-out /tmp/neuramind-cert.p12 \
 			-passout pass: -name "$(SIGN_ID)" 2>/dev/null && \
-		security import /tmp/contextd-cert.p12 \
+		security import /tmp/neuramind-cert.p12 \
 			-k ~/Library/Keychains/login.keychain-db \
 			-T /usr/bin/codesign 2>/dev/null && \
-		rm -f /tmp/contextd-cert.conf /tmp/contextd-cert.key /tmp/contextd-cert.pem /tmp/contextd-cert.p12 && \
+		rm -f /tmp/neuramind-cert.conf /tmp/neuramind-cert.key /tmp/neuramind-cert.pem /tmp/neuramind-cert.p12 && \
 		echo "$(GREEN)Certificate '$(SIGN_ID)' created and imported.$(RESET)" && \
 		echo "$(YELLOW)You may need to open Keychain Access, find '$(SIGN_ID)', and set Trust → Code Signing → Always Trust.$(RESET)"; \
 	fi

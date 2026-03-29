@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Backfill unsummarized captures in autolog using claude -p.
+"""Backfill unsummarized captures in neuramind using claude -p.
 
 Reads unsummarized captures from the SQLite DB, chunks them using the same
 hybrid algorithm as the Swift app (time windows + app boundaries), calls
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-DB_PATH = Path.home() / "Library/Application Support/ContextD/contextd.sqlite"
+DB_PATH = Path.home() / "Library/Application Support/NeuraMind/neuramind.sqlite"
 
 # Match SummarizationEngine.swift defaults
 CHUNK_DURATION = 300  # 5 min
@@ -38,7 +38,7 @@ that changed between snapshots).
 
 For key_topics, REUSE canonical names from this vocabulary when they match:
 
-Projects: Pigbet, AutoLog, 3Brown1Blue, RAS-Optimize, AutoResearchClaw, \
+Projects: Pigbet, NeuraMind, 3Brown1Blue, RAS-Optimize, AutoResearchClaw, \
 Reallms, Deep Variance, GlazerAI, Thehuzz
 Research: Brain-Computer Interface, Neuroimaging, Image Registration, \
 Brain Extraction, Preprocessing, Monte Carlo Photon Transport, Diffuse Optical \
@@ -70,7 +70,7 @@ NEVER include:
 the subject of the work
 - Action words as topics ("Debugging", "Browsing", "Coding", "Reading")
 - Terminal tab names, usernames, or directory names as topics
-- The tool "autolog" itself unless the user is actively developing it
+- The tool "neuramind" itself unless the user is actively developing it
 
 For activity_type, classify as exactly ONE of:
 - "coding" (writing, debugging, building, testing code)

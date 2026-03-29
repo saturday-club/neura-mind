@@ -1,4 +1,4 @@
-"""Formatting helpers for the autolog Obsidian sync.
+"""Formatting helpers for the neuramind Obsidian sync.
 
 Pure functions for slugifying names, formatting durations, and building
 Markdown content for Activity, App, Topic, and Daily notes.
@@ -91,17 +91,17 @@ _TOPIC_CANON: dict[str, str] = {
     # Database
     "database debugging": "Database",
     "database enrichment": "Database",
-    # AutoLog
-    "contextd debugging": "AutoLog",
-    "autolog": "AutoLog",
-    "autolog vault": "AutoLog",
-    "autolog-vault": "AutoLog",
-    "mirrorlog": "AutoLog",
-    "activity capture": "AutoLog",
-    "activity logging": "AutoLog",
-    "screenshot capture": "AutoLog",
-    "context capture": "AutoLog",
-    "menu bar app": "AutoLog",
+    # NeuraMind
+    "neuramind debugging": "NeuraMind",
+    "neuramind": "NeuraMind",
+    "neuramind vault": "NeuraMind",
+    "neuramind-vault": "NeuraMind",
+    "mirrorlog": "NeuraMind",
+    "activity capture": "NeuraMind",
+    "activity logging": "NeuraMind",
+    "screenshot capture": "NeuraMind",
+    "context capture": "NeuraMind",
+    "menu bar app": "NeuraMind",
     # Projects
     "personal projects": "Projects",
     "project files": "Projects",

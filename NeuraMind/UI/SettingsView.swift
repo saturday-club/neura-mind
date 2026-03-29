@@ -35,11 +35,7 @@ struct SettingsView: View {
     }
 
     // LLM Provider Settings
-    @AppStorage("llmProvider") private var storedProvider: String = LLMProvider.claude.rawValue
-    @State private var selectedProvider: LLMProvider = .claude
     @State private var claudeAvailable: Bool = false
-    @State private var apiKey: String = ""
-    @State private var hasApiKey: Bool = false
     @AppStorage("summarizationModel") private var summarizationModel: String = Defaults.summarizationModel
     @AppStorage("enrichmentPass1Model") private var enrichmentPass1Model: String = Defaults.enrichmentPass1Model
     @AppStorage("enrichmentPass2Model") private var enrichmentPass2Model: String = Defaults.enrichmentPass2Model
@@ -95,8 +91,6 @@ struct SettingsView: View {
     @AppStorage(PromptTemplates.SettingsKey.enrichmentPass2System.rawValue)
     private var customPass2System: String = ""
 
-    @State private var showApiKeySaved: Bool = false
-    @State private var saveError: String?
     @State private var selectedTab: SettingsTab = .general
 
     enum SettingsTab: String, CaseIterable, Identifiable {
@@ -139,9 +133,7 @@ struct SettingsView: View {
         .padding(20)
         .frame(width: 580, height: 500)
         .onAppear {
-            selectedProvider = LLMProvider(rawValue: storedProvider) ?? .claude
             claudeAvailable = ClaudeShellClient.isAvailable()
-            hasApiKey = OpenRouterClient.hasAPIKey()
         }
     }
 
@@ -150,26 +142,7 @@ struct SettingsView: View {
     private var generalTab: some View {
         Form {
             Section("LLM Provider") {
-                Picker("Provider:", selection: $selectedProvider) {
-                    ForEach(LLMProvider.allCases, id: \.self) { provider in
-                        Text(provider.displayName).tag(provider)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: selectedProvider) { _, newProvider in
-                    storedProvider = newProvider.rawValue
-                    hasApiKey = OpenRouterClient.hasAPIKey()
-                }
-
-                if selectedProvider == .claude {
-                    claudeSettingsView
-                } else {
-                    apiKeySettingsView
-                }
-
-                Text("Restart the app after switching providers.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                claudeSettingsView
             }
 
             Section("Capture") {
@@ -274,40 +247,6 @@ struct SettingsView: View {
             Text("Uses your Claude Code session directly. No API key needed.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        }
-    }
-
-    private var apiKeySettingsView: some View {
-        Group {
-            HStack {
-                SecureField("OpenRouter API Key", text: $apiKey)
-                    .textFieldStyle(.roundedBorder)
-
-                Button(action: saveApiKey) {
-                    Text(showApiKeySaved ? "Saved!" : "Save")
-                }
-                .disabled(apiKey.isEmpty)
-            }
-
-            if let error = saveError {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-
-            if hasApiKey {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text("API key is configured")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
     }
 
@@ -505,21 +444,4 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Actions
-
-    private func saveApiKey() {
-        do {
-            try OpenRouterClient.saveAPIKey(apiKey)
-            hasApiKey = true
-            showApiKeySaved = true
-            saveError = nil
-            apiKey = "" // Clear from memory
-            Task {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                showApiKeySaved = false
-            }
-        } catch {
-            saveError = "Failed to save API key: \(error.localizedDescription)"
-        }
-    }
 }

@@ -1,7 +1,7 @@
 """Force-run the full pipeline NOW and show every stage output.
 
 Does NOT wait for the 15-min aging window. Grabs recent captures,
-formats them exactly as contextd would, calls Haiku, and shows results.
+formats them exactly as neuramind would, calls Haiku, and shows results.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path.home() / "Library/Application Support/ContextD/contextd.sqlite"
+DB_PATH = Path.home() / "Library/Application Support/NeuraMind/neuramind.sqlite"
 PROCESS_DIR = Path(__file__).parent
 PROXY_URL = "http://127.0.0.1:11434/v1/chat/completions"
 
@@ -79,7 +79,7 @@ def main() -> None:
         save("(see 1_screenshot.png)", "1_screenshot_note.txt")
     except subprocess.CalledProcessError:
         print("  (screencapture not authorized from Terminal -- skipping)")
-        print("  contextd captures via its own process, this is fine.")
+        print("  neuramind captures via its own process, this is fine.")
 
     # Wait for a couple captures
     print("\n[2] WAITING FOR CAPTURES (20s)...")
@@ -91,7 +91,7 @@ def main() -> None:
     )
     print(f"\n[3] CAPTURES: {len(captures)} recent")
     if not captures:
-        print("  ERROR: No captures found. Is contextd running?")
+        print("  ERROR: No captures found. Is neuramind running?")
         return
 
     for c in captures[:3]:

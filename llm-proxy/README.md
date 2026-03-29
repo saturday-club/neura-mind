@@ -203,13 +203,13 @@ curl http://YOUR_IP:21891/v1/chat/completions \
 
 ```bash
 # Create the plist
-cat > ~/Library/LaunchAgents/com.autolog.llm-proxy.plist << 'EOF'
+cat > ~/Library/LaunchAgents/com.neuramind.llm-proxy.plist << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.autolog.llm-proxy</string>
+    <string>com.neuramind.llm-proxy</string>
     <key>ProgramArguments</key>
     <array>
         <string>/path/to/llm-proxy/run.sh</string>
@@ -231,7 +231,7 @@ cat > ~/Library/LaunchAgents/com.autolog.llm-proxy.plist << 'EOF'
 EOF
 
 # Load it
-launchctl load ~/Library/LaunchAgents/com.autolog.llm-proxy.plist
+launchctl load ~/Library/LaunchAgents/com.neuramind.llm-proxy.plist
 ```
 
 ### The run.sh wrapper (critical for launchd)
@@ -255,13 +255,13 @@ Without this, the proxy will start but every request will fail with "claude CLI 
 
 ```bash
 # Restart
-launchctl kickstart -k gui/$(id -u)/com.autolog.llm-proxy
+launchctl kickstart -k gui/$(id -u)/com.neuramind.llm-proxy
 
 # Stop
-launchctl bootout gui/$(id -u)/com.autolog.llm-proxy
+launchctl bootout gui/$(id -u)/com.neuramind.llm-proxy
 
 # Check status
-launchctl list com.autolog.llm-proxy
+launchctl list com.neuramind.llm-proxy
 
 # View logs
 tail -f /tmp/claude-proxy.log

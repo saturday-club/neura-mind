@@ -13,8 +13,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 
-AUTOLOG_URL = "http://127.0.0.1:21890"
-AUTH_TOKEN_PATH = Path.home() / ".config" / "autolog" / "auth_token"
+NEURAMIND_URL = "http://127.0.0.1:21890"
+AUTH_TOKEN_PATH = Path.home() / ".config" / "neuramind" / "auth_token"
 MEMORY_DIR = Path.home() / ".claude" / "projects" / "-Users-amit" / "memory"
 MEMORY_INDEX = MEMORY_DIR / "MEMORY.md"
 CLAUDE_TIMEOUT = 60
@@ -41,7 +41,7 @@ PROMPT_TEMPLATE = (
 
 
 def read_auth_token() -> str:
-    """Read autolog bearer token from ~/.config/autolog/auth_token."""
+    """Read neuramind bearer token from ~/.config/neuramind/auth_token."""
     try:
         return AUTH_TOKEN_PATH.read_text(encoding="utf-8").strip()
     except (OSError, FileNotFoundError) as exc:
@@ -50,15 +50,15 @@ def read_auth_token() -> str:
 
 
 def fetch_summaries(token: str) -> list[dict]:
-    """Fetch last 6h of summaries from autolog with bearer auth."""
-    url = f"{AUTOLOG_URL}/v1/summaries?minutes=360&limit=200"
+    """Fetch last 6h of summaries from neuramind with bearer auth."""
+    url = f"{NEURAMIND_URL}/v1/summaries?minutes=360&limit=200"
     req = urllib.request.Request(url, method="GET")
     req.add_header("Authorization", f"Bearer {token}")
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode())
     except (urllib.error.URLError, OSError) as exc:
-        logger.error("autolog unreachable: %s", exc)
+        logger.error("neuramind unreachable: %s", exc)
         return []
     return data if isinstance(data, list) else data.get("summaries", data.get("data", []))
 

@@ -1,9 +1,9 @@
 import XCTest
-@testable import ContextD
+@testable import NeuraMind
 
 final class FocusStateStoreTests: XCTestCase {
     private let focusDir = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/autolog")
+        .appendingPathComponent(".config/neuramind")
     private var originalCurrent: Data?
     private var originalBlocks: Data?
 

@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# session-context.sh - Claude Code SessionStart hook for autolog
+# session-context.sh - Claude Code SessionStart hook for neuramind
 #
-# Fetches recent screen activity summaries from autolog and outputs
+# Fetches recent screen activity summaries from neuramind and outputs
 # them as a markdown context block. Designed for graceful degradation:
-# if autolog is not running, outputs nothing.
+# if neuramind is not running, outputs nothing.
 #
 # Must complete in under 5 seconds total.
 
 set -euo pipefail
 
-AUTOLOG_URL="http://localhost:21890"
+NEURAMIND_URL="http://localhost:21890"
 CURL_TIMEOUT=1
 OVERALL_TIMEOUT=4
 
-# Check if autolog is reachable (1s timeout on health endpoint)
-if ! curl -sf --max-time "$CURL_TIMEOUT" "$AUTOLOG_URL/health" >/dev/null 2>&1; then
+# Check if neuramind is reachable (1s timeout on health endpoint)
+if ! curl -sf --max-time "$CURL_TIMEOUT" "$NEURAMIND_URL/health" >/dev/null 2>&1; then
     exit 0
 fi
 
 # Fetch last 30 minutes of summaries (capped at 10)
 response=$(curl -sf --max-time "$OVERALL_TIMEOUT" \
-    "$AUTOLOG_URL/v1/summaries?minutes=30&limit=10" 2>/dev/null) || exit 0
+    "$NEURAMIND_URL/v1/summaries?minutes=30&limit=10" 2>/dev/null) || exit 0
 
 # Bail if empty or missing data
 if [ -z "$response" ]; then

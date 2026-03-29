@@ -1,6 +1,6 @@
 #!/bin/bash
-# Install all launchd agents for autolog.
-# Copies plists to ~/Library/LaunchAgents and loads them so autolog
+# Install all launchd agents for neuramind.
+# Copies plists to ~/Library/LaunchAgents and loads them so neuramind
 # services auto-start on login.
 #
 # Usage:
@@ -22,8 +22,8 @@ RESET='\033[0m'
 mkdir -p "$LAUNCHD_DIR"
 
 if [ "${1:-}" = "--remove" ]; then
-    echo -e "${CYAN}Removing autolog launchd agents...${RESET}"
-    for plist in "$SRC_DIR"/com.contextd.*.plist; do
+    echo -e "${CYAN}Removing neuramind launchd agents...${RESET}"
+    for plist in "$SRC_DIR"/com.neuramind.*.plist; do
         [ -f "$plist" ] || continue
         name=$(basename "$plist")
         if [ -f "$LAUNCHD_DIR/$name" ]; then
@@ -34,17 +34,17 @@ if [ "${1:-}" = "--remove" ]; then
             echo -e "  (not installed: $name)"
         fi
     done
-    echo -e "${GREEN}All autolog launchd agents removed.${RESET}"
+    echo -e "${GREEN}All neuramind launchd agents removed.${RESET}"
     exit 0
 fi
 
-echo -e "${CYAN}Installing autolog launchd agents...${RESET}"
+echo -e "${CYAN}Installing neuramind launchd agents...${RESET}"
 echo -e "  Source:  $SRC_DIR"
 echo -e "  Target:  $LAUNCHD_DIR"
 echo ""
 
 installed=0
-for plist in "$SRC_DIR"/com.contextd.*.plist; do
+for plist in "$SRC_DIR"/com.neuramind.*.plist; do
     [ -f "$plist" ] || continue
     name=$(basename "$plist")
 
@@ -68,10 +68,10 @@ fi
 
 echo ""
 echo -e "${GREEN}All $installed launchd agents installed.${RESET}"
-echo -e "autolog will auto-start on login."
+echo -e "neuramind will auto-start on login."
 echo ""
 echo "To verify:"
-echo "  launchctl list | grep contextd  # plist files still use contextd naming"
+echo "  launchctl list | grep neuramind  # plist files still use neuramind naming"
 echo ""
 echo "To remove:"
 echo "  ./scripts/install-launchd.sh --remove"

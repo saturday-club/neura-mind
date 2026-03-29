@@ -11,13 +11,13 @@ cat <<'EOF'
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>ContextD</string>
+    <string>NeuraMind</string>
     <key>CFBundleIdentifier</key>
-    <string>com.contextd.app</string>
+    <string>com.neuramind.app</string>
     <key>CFBundleName</key>
-    <string>AutoLog</string>
+    <string>NeuraMind</string>
     <key>CFBundleDisplayName</key>
-    <string>AutoLog</string>
+    <string>NeuraMind</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -31,15 +31,15 @@ cat <<'EOF'
     <key>LSUIElement</key>
     <true/>
     <key>CFBundleIconFile</key>
-    <string>autolog</string>
+    <string>neuramind</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
     <true/>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>AutoLog captures screenshots to build your activity timeline. No data leaves your device without your permission.</string>
+    <string>NeuraMind captures screenshots to build your activity timeline. No data leaves your device without your permission.</string>
     <key>NSAccessibilityUsageDescription</key>
-    <string>AutoLog reads window titles and focused elements to provide richer context in your activity log.</string>
+    <string>NeuraMind reads window titles and focused elements to provide richer context in your activity log.</string>
 </dict>
 </plist>
 EOF

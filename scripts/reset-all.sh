@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# reset-all.sh — Reset AutoLog to a clean state for testing.
+# reset-all.sh — Reset NeuraMind to a clean state for testing.
 # Kills the running app, resets permissions, and optionally deletes the database.
 #
 # Usage:
@@ -9,9 +9,9 @@
 
 set -euo pipefail
 
-BUNDLE_ID="com.autolog.app"
-PRODUCT="ContextD"
-DB_PATH="$HOME/Library/Application Support/ContextD/contextd.sqlite"
+BUNDLE_ID="com.neuramind.app"
+PRODUCT="NeuraMind"
+DB_PATH="$HOME/Library/Application Support/NeuraMind/neuramind.sqlite"
 
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -19,12 +19,12 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 RESET='\033[0m'
 
-echo -e "${CYAN}AutoLog Reset${RESET}"
+echo -e "${CYAN}NeuraMind Reset${RESET}"
 echo "──────────────────────────────────"
 
 # Kill running instances
 if pgrep -f "${PRODUCT}" > /dev/null 2>&1; then
-    echo -e "${YELLOW}Killing running AutoLog processes...${RESET}"
+    echo -e "${YELLOW}Killing running NeuraMind processes...${RESET}"
     pkill -f "${PRODUCT}" 2>/dev/null || true
     sleep 1
     echo -e "${GREEN}  Done.${RESET}"

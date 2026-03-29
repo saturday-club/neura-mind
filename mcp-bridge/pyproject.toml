@@ -1,7 +1,7 @@
 [project]
-name = "contextd-mcp"
+name = "neuramind-mcp"
 version = "0.1.0"
-description = "MCP server bridge for contextd screen context API"
+description = "MCP server bridge for neuramind screen context API"
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]",
@@ -12,4 +12,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-contextd-mcp = "contextd_mcp:mcp.run"
+neuramind-mcp = "neuramind_mcp:mcp.run"

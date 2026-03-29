@@ -1,5 +1,5 @@
 import XCTest
-@testable import ContextD
+@testable import NeuraMind
 
 /// Tests for ImageDiffer: verifies SIMD-optimized tile diff produces identical
 /// results to the scalar reference implementation, and benchmarks both paths.

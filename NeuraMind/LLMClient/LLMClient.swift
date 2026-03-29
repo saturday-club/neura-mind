@@ -124,7 +124,9 @@ enum LLMError: LocalizedError {
 /// Available LLM backend strategies.
 enum LLMProvider: String, CaseIterable {
     case claude = "claude"          // Direct `claude -p` shell execution, no API key needed
-    case openrouter = "openrouter"  // OpenRouter REST API
+    case openrouter = "openrouter"  // OpenRouter REST API (disabled for now)
+
+    static var allCases: [LLMProvider] { [.claude] }
 
     static var current: LLMProvider {
         let raw = UserDefaults.standard.string(forKey: "llmProvider") ?? Self.claude.rawValue

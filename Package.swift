@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "ContextD",
+    name: "NeuraMind",
     platforms: [
         .macOS(.v14)
     ],
@@ -12,17 +12,17 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "ContextD",
+            name: "NeuraMind",
             dependencies: [
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Hummingbird", package: "hummingbird"),
             ],
-            path: "ContextD",
+            path: "NeuraMind",
             exclude: ["Assets.xcassets"]
         ),
         .testTarget(
-            name: "ContextDTests",
-            dependencies: ["ContextD"],
+            name: "NeuraMindTests",
+            dependencies: ["NeuraMind"],
             path: "Tests"
         ),
     ]

@@ -8,7 +8,7 @@ All Visible Windows:
 Brave Browser: CRUCIX — Intelligence Terminal - Brave
 Claude: Claude
 Emacs: *claude-code[Downloads]* – Doom Emacs
-Finder: contextd
+Finder: neuramind
 Safari: CV — (4) Post | Feed | LinkedIn
 Terminal: amit — ⠂ Claude Code — caffeinate ◂ claude — 134×39
 iTerm2: /bin/bash
@@ -139,7 +139,7 @@ Search
 • Applications
 • amit
 • apple_build_secrets
-ContextD
+NeuraMind
 • Network
 Library
 Shared
@@ -150,7 +150,7 @@ System
 • AutoResearchClaw
 hooks
 Users
-contextd
+neuramind
 launchd
 Desktop
 *
@@ -197,5 +197,5 @@ beautful check the piepieline if that works then we're great, look
 if i can actualy like get sinisghts app wise and stuff please..
 also check ram usage
 + Cogitating...
-amit@Amits-MacBook-Pro ~/contextd 
+amit@Amits-MacBook-Pro ~/neuramind 
 [...truncated]

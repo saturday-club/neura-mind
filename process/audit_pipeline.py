@@ -1,4 +1,4 @@
-"""Audit the contextd pipeline by capturing one full cycle's artifacts.
+"""Audit the neuramind pipeline by capturing one full cycle's artifacts.
 
 Saves intermediate outputs from each stage to process/ folder:
   1_screenshot.png        - Raw screen capture
@@ -13,7 +13,7 @@ Saves intermediate outputs from each stage to process/ folder:
   10_session_record.json  - App session record (if finalized)
 
 Run: python3 process/audit_pipeline.py
-Requires: contextd running on port 21890
+Requires: neuramind running on port 21890
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DB_PATH = Path.home() / "Library/Application Support/ContextD/contextd.sqlite"
+DB_PATH = Path.home() / "Library/Application Support/NeuraMind/neuramind.sqlite"
 PROCESS_DIR = Path(__file__).parent
 API_BASE = "http://127.0.0.1:21890"
 
@@ -57,7 +57,7 @@ def save_text(text: str, filename: str) -> Path:
 
 
 def take_screenshot() -> Path:
-    """Take a screenshot using screencapture (same as what contextd sees)."""
+    """Take a screenshot using screencapture (same as what neuramind sees)."""
     path = PROCESS_DIR / "1_screenshot.png"
     subprocess.run(
         ["screencapture", "-x", "-C", str(path)],
@@ -107,7 +107,7 @@ def get_latest_session(after_ts: float) -> dict | None:
 def main() -> None:
     """Run the full pipeline audit."""
     print("=" * 60)
-    print("contextd Pipeline Audit")
+    print("neuramind Pipeline Audit")
     print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60)
 
@@ -121,11 +121,11 @@ def main() -> None:
     print("\n--- Stage 1: Screenshot ---")
     take_screenshot()
 
-    # Stage 2-4: Wait for contextd to capture + OCR
+    # Stage 2-4: Wait for neuramind to capture + OCR
     print("\n--- Stage 2-4: Waiting for new capture (OCR + metadata)... ---")
     capture = wait_for_new_capture(start_id, timeout=60)
     if not capture:
-        print("  ERROR: No new capture appeared in 60s. Is contextd running?")
+        print("  ERROR: No new capture appeared in 60s. Is neuramind running?")
         return
 
     cap_id = capture["id"]

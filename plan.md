@@ -100,7 +100,7 @@ All from Apple's system color palette. Border renders at 85% opacity — percept
 
 ## New Files
 
-### `ContextD/Focus/FocusOverlayState.swift`
+### `NeuraMind/Focus/FocusOverlayState.swift`
 
 Types only, no logic.
 
@@ -126,7 +126,7 @@ struct FocusScore: Sendable {
 }
 ```
 
-### `ContextD/Focus/FocusScoreEngine.swift`
+### `NeuraMind/Focus/FocusScoreEngine.swift`
 
 ```swift
 @MainActor
@@ -156,7 +156,7 @@ final class FocusScoreEngine: ObservableObject {
 
 No async, no Task, no await. GRDB reads on the main thread complete in < 1ms for a 5-minute window. The 10s interval means there's zero perceptible blocking.
 
-### `ContextD/UI/BorderOverlayView.swift`
+### `NeuraMind/UI/BorderOverlayView.swift`
 
 ```swift
 struct BorderOverlayView: View {
@@ -181,7 +181,7 @@ struct BorderOverlayView: View {
 
 `Color.clear` at the root combined with `ignoresMouseEvents = true` at the window level means zero interaction surface. The view is purely visual.
 
-### `ContextD/UI/BorderOverlayWindowController.swift`
+### `NeuraMind/UI/BorderOverlayWindowController.swift`
 
 ```swift
 @MainActor
@@ -232,7 +232,7 @@ win.contentView = NSHostingView(rootView: BorderOverlayView(state: .transitionin
 
 ## Modified Files
 
-### `ContextD/App/ServiceContainer.swift`
+### `NeuraMind/App/ServiceContainer.swift`
 
 Add two properties:
 
@@ -261,7 +261,7 @@ borderOverlayController?.start()
 
 In the error catch block: assign both to `nil`.
 
-### `ContextD/App/AppDelegate.swift`
+### `NeuraMind/App/AppDelegate.swift`
 
 Register for display hot-plug in `applicationDidFinishLaunching`:
 
@@ -278,7 +278,7 @@ NotificationCenter.default.addObserver(
 }
 ```
 
-### `ContextD/UI/MenuBarView.swift`
+### `NeuraMind/UI/MenuBarView.swift`
 
 Add a focus state row at the top of the popover (small colored dot + state label + score percentage):
 
@@ -556,8 +556,8 @@ func lastProductiveSummary(for appName: String, before date: Date) throws -> Sum
 
 | File | What |
 |------|------|
-| `ContextD/Focus/ContextRecoveryEngine.swift` | Engine: transition detection, DB query, Haiku call |
-| `ContextD/UI/ContextRecoveryCard.swift` | SwiftUI card view + NSPanel controller |
+| `NeuraMind/Focus/ContextRecoveryEngine.swift` | Engine: transition detection, DB query, Haiku call |
+| `NeuraMind/UI/ContextRecoveryCard.swift` | SwiftUI card view + NSPanel controller |
 
 ---
 

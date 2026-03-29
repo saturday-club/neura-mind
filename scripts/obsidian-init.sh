@@ -1,10 +1,10 @@
 #!/bin/bash
-# One-time Obsidian vault initialization for autolog activity graph.
+# One-time Obsidian vault initialization for neuramind activity graph.
 # Creates the vault directory structure and minimal Obsidian config.
 
 set -euo pipefail
 
-VAULT="$HOME/Documents/autolog-vault"
+VAULT="$HOME/Documents/neuramind-vault"
 
 echo "Creating vault at $VAULT ..."
 mkdir -p "$VAULT"/{.obsidian,Activities,Apps,Topics,Daily,Blocks,Maps,Reflections}
@@ -55,5 +55,5 @@ echo ""
 echo "Next steps:"
 echo "  1. Open Obsidian"
 echo "  2. 'Open folder as vault' -> select $VAULT"
-echo "  3. Run: python3 ~/contextd/scripts/obsidian-sync.py"  # repo path unchanged
+echo "  3. Run: python3 ~/neuramind/scripts/obsidian-sync.py"  # repo path unchanged
 echo "  4. Open the Graph View (Cmd+G in Obsidian)"

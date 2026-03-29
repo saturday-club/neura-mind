@@ -3,7 +3,7 @@
 Your screen, understood.
 
 ```bash
-brew install --cask AmitSubhash/tap/autolog
+# See installation instructions below
 ```
 
 AutoLog is a macOS menu bar app that watches what you do on your computer and builds a searchable activity knowledge graph from it. It captures your screen via OCR, infers what you're working on using an LLM, connects related activities across apps, and syncs everything to an Obsidian vault as linked notes.
@@ -226,16 +226,16 @@ This creates a useful separation: planning lives in Org, but productivity and dr
 
 Focus blocks are stored as small local files:
 
-- `~/.config/autolog/focus-state.json` -- the current active block
-- `~/.config/autolog/focus-blocks.jsonl` -- completed/interrupted block history
+- `~/.config/neuramind/focus-state.json` -- the current active block
+- `~/.config/neuramind/focus-blocks.jsonl` -- completed/interrupted block history
 - `~/org/today.org` -- daily dashboard
-- `~/org/autolog-scorecard.org` -- review log
+- `~/org/neuramind-scorecard.org` -- review log
 
 When you start a block, Emacs writes the declared task, done condition, artifact goal, and drift budget. When you stop a block, AutoLog appends the finalized block to the log and writes a compact Org review entry to the scorecard.
 
 ### Emacs commands
 
-The helper script lives at `scripts/autolog-focus.el` and is intended to be loaded from your Doom config. The default keybindings are:
+The helper script lives at `scripts/neuramind-focus.el` and is intended to be loaded from your Doom config. The default keybindings are:
 
 ```text
 SPC n z s  start focus block
@@ -418,7 +418,7 @@ SQLite via GRDB with 10 migrations, WAL mode for concurrent reads, and FTS5 full
 | `captures_fts` | FTS5 index over capture text |
 | `summaries_fts` | FTS5 index over summary text |
 
-Database location: `~/Library/Application Support/ContextD/autolog.db`
+Database location: `~/Library/Application Support/NeuraMind/neuramind.sqlite`
 
 ---
 
@@ -518,7 +518,7 @@ Add the MCP server to your Claude Code config to enable it.
 Source the relevant hook from your shell config:
 
 ```bash
-source ~/autolog/hooks/autolog.zsh
+source ~/neuramind/hooks/neuramind.zsh
 ```
 
 ---
@@ -648,7 +648,7 @@ Nightly digest and daily reflection use Haiku and Opus respectively and run once
 
 ## Privacy
 
-- All data stays local (SQLite database in `~/Library/Application Support/ContextD/`)
+- All data stays local (SQLite database in `~/Library/Application Support/NeuraMind/`)
 - Password managers and System Settings are excluded from capture by default
 - AutoLog's own windows are excluded from screenshots
 - LLM calls go through your local `claude -p` proxy -- no data sent to third-party APIs

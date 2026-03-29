@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-DB_PATH="$HOME/Library/Application Support/ContextD/contextd.sqlite"
+DB_PATH="$HOME/Library/Application Support/NeuraMind/neuramind.sqlite"
 
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -23,7 +23,7 @@ RESET='\033[0m'
 check_db() {
     if [ ! -f "$DB_PATH" ]; then
         echo -e "${RED}Database not found at: ${DB_PATH}${RESET}"
-        echo "Run AutoLog first to create the database."
+        echo "Run NeuraMind first to create the database."
         exit 1
     fi
 }
@@ -189,7 +189,7 @@ SQL
 }
 
 cmd_interactive() {
-    echo -e "${CYAN}AutoLog Database Inspector${RESET}"
+    echo -e "${CYAN}NeuraMind Database Inspector${RESET}"
     echo ""
     echo "  1) Statistics"
     echo "  2) Recent captures"

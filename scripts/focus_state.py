@@ -1,9 +1,9 @@
-"""Focus block state management for AutoLog.
+"""Focus block state management for NeuraMind.
 
-This module provides a small file-based contract between Emacs and AutoLog.
+This module provides a small file-based contract between Emacs and NeuraMind.
 Emacs owns the user's declared intent and writes the current block to
-``~/.config/autolog/focus-state.json``. Completed blocks are appended to
-``~/.config/autolog/focus-blocks.jsonl`` so the app and vault sync can bind
+``~/.config/neuramind/focus-state.json``. Completed blocks are appended to
+``~/.config/neuramind/focus-blocks.jsonl`` so the app and vault sync can bind
 captured activity back to a declared task.
 """
 from __future__ import annotations
@@ -16,10 +16,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-FOCUS_DIR = Path.home() / ".config" / "autolog"
+FOCUS_DIR = Path.home() / ".config" / "neuramind"
 CURRENT_STATE_PATH = FOCUS_DIR / "focus-state.json"
 BLOCKS_LOG_PATH = FOCUS_DIR / "focus-blocks.jsonl"
-DEFAULT_SCORECARD_PATH = Path.home() / "org" / "autolog-scorecard.org"
+DEFAULT_SCORECARD_PATH = Path.home() / "org" / "neuramind-scorecard.org"
 
 
 def _ensure_focus_dir() -> None:
@@ -165,7 +165,7 @@ def _ensure_scorecard_file(path: Path) -> None:
     if path.exists():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#+title: AutoLog Scorecard\n\n* Inbox Reviews\n", encoding="utf-8")
+    path.write_text("#+title: NeuraMind Scorecard\n\n* Inbox Reviews\n", encoding="utf-8")
 
 
 def append_scorecard_entry(block: dict[str, Any]) -> Path:
@@ -493,7 +493,7 @@ def _cmd_productivity(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser."""
-    parser = argparse.ArgumentParser(description="Manage AutoLog focus blocks.")
+    parser = argparse.ArgumentParser(description="Manage NeuraMind focus blocks.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     start = subparsers.add_parser("start", help="Start a new focus block.")
