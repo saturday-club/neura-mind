@@ -53,10 +53,17 @@ final class TimeTrackerEngine: ObservableObject {
 
     private init() {
         load()
-        if let running = tasks.first(where: { $0.isRunning }) {
-            activeTaskID = running.id
-            startTick()
+        // Close any orphaned sessions from a previous app launch
+        var didFix = false
+        for i in tasks.indices {
+            if let lastIdx = tasks[i].sessions.indices.last,
+               tasks[i].sessions[lastIdx].endedAt == nil {
+                tasks[i].sessions[lastIdx].endedAt = Date()
+                didFix = true
+            }
         }
+        if didFix { save() }
+        activeTaskID = nil
     }
 
     func addTask(name: String) {

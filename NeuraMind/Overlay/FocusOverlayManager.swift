@@ -74,8 +74,13 @@ final class FocusOverlayManager {
         }
 
         // If snapshots haven't changed (NeuraMind frontmost = frozen snapshots),
-        // skip all expensive work. Just keep overlays where they are.
+        // skip expensive window reordering but still push effects so slider
+        // changes (blur, tint, grain) are applied in real time.
         if snapshots == lastSnapshots && overlaysVisible {
+            for (_, entry) in overlays {
+                entry.contentView.updateEffects(state: overlayState)
+            }
+            notchEars.updateEffects(state: overlayState)
             return
         }
 

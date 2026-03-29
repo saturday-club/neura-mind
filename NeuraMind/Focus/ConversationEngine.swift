@@ -87,7 +87,8 @@ final class ConversationEngine: ObservableObject {
         var parts: [String] = [
             "You are an ADHD-aware productivity assistant for NeuraMind.",
             "You have access to the user's screen activity captured today.",
-            "Be conversational, specific, and concise — ADHD brains don't need essays."
+            "Be conversational, specific, and concise. ADHD brains don't need essays.",
+            PromptTemplates.antiSlop
         ]
 
         if !summaries.isEmpty {

@@ -415,8 +415,9 @@ private struct GlassPanelView: View {
         }
 
         if let usage = try? storage.totalTokenUsage24h() {
-            let inputCost = usage.inputMtok * 0.25
-            let outputCost = usage.outputMtok * 1.25
+            // Haiku 4.5 pricing: $0.80/Mtok input, $4.00/Mtok output
+            let inputCost = usage.inputMtok * 0.80
+            let outputCost = usage.outputMtok * 5.00
             estimatedCostToday = inputCost + outputCost
         }
     }
@@ -426,7 +427,7 @@ private struct GlassPanelView: View {
 
 /// Focus overlay controls: toggle, blur, tint, grain sliders.
 private struct OverlayControlsCard: View {
-    @State private var overlayState = OverlayState.shared
+    @Bindable private var overlayState = OverlayState.shared
 
     var body: some View {
         GlassCard {

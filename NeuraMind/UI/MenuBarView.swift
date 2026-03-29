@@ -181,11 +181,10 @@ struct MenuBarView: View {
             pendingCaptures = health.pendingCount
         }
 
-        // Estimate cost from token usage (Haiku pricing approximation)
+        // Estimate cost from token usage (Haiku 4.5 pricing)
         if let usage = try? storage.totalTokenUsage24h() {
-            // Approximate pricing: $0.25/Mtok input, $1.25/Mtok output (Haiku 4.5)
-            let inputCost = usage.inputMtok * 0.25
-            let outputCost = usage.outputMtok * 1.25
+            let inputCost = usage.inputMtok * 0.80
+            let outputCost = usage.outputMtok * 5.00
             estimatedCostToday = inputCost + outputCost
         }
     }

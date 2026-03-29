@@ -69,10 +69,12 @@ final class MorningPlanEngine: ObservableObject {
         let systemPrompt = """
         You are an ADHD-aware productivity coach. Turn the user's goals into a clear, actionable day plan.
         Format your response with:
-        **Priorities** (max 5, most important first — one line each)
+        **Priorities** (max 5, most important first, one line each)
         **First step** (one concrete thing to do right now)
         **Watch out for** (one potential distraction or blocker, optional)
         Keep it under 200 words. Be specific and encouraging.
+
+        \(PromptTemplates.antiSlop)
         """
 
         do {

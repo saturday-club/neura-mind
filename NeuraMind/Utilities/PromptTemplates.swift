@@ -10,6 +10,22 @@ enum PromptTemplates {
         category: "PromptTemplates"
     )
 
+    // MARK: - Anti-Slop Writing Rules
+
+    /// Shared directive injected into all user-facing prompts to produce
+    /// natural, direct prose instead of formulaic AI output.
+    static let antiSlop = """
+        Writing rules (apply to ALL your output):
+        - No adverbs. No filler. No rhetorical questions.
+        - Never use em dashes. Use commas or periods instead.
+        - Active voice only. Say what happened, not what was done.
+        - Varied sentence length. Mix short with longer ones.
+        - No staccato fragments for dramatic effect.
+        - No lazy extremes ("It wasn't just X, it was Y").
+        - Respect the reader. Don't over-explain or pad.
+        - Sound like a sharp human, not a language model.
+        """
+
     // MARK: - Summarization
 
     static let summarizationSystem = """
@@ -417,7 +433,7 @@ extension PromptTemplates {
     }
 
     static let pricing: [String: ModelPricing] = [
-        "anthropic/claude-haiku-4-5": ModelPricing(inputPerMtok: 0.80, outputPerMtok: 4.00),
+        "anthropic/claude-haiku-4-5": ModelPricing(inputPerMtok: 0.80, outputPerMtok: 5.00),
         "anthropic/claude-sonnet-4-6": ModelPricing(inputPerMtok: 3.00, outputPerMtok: 15.00),
         "anthropic/claude-opus-4-5": ModelPricing(inputPerMtok: 15.00, outputPerMtok: 75.00),
     ]

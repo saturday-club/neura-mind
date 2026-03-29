@@ -49,8 +49,10 @@ final class WindDownEngine: ObservableObject {
         Format your response with:
         **Accomplished** (2-3 bullets of what actually got done)
         **Focus patterns** (what pulled attention, how focused overall)
-        **Tomorrow** (one sentence — a single intention to carry forward)
+        **Tomorrow** (one sentence, a single intention to carry forward)
         Keep it under 200 words. Be encouraging, not critical.
+
+        \(PromptTemplates.antiSlop)
         """
 
         do {
