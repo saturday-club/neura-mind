@@ -16,6 +16,25 @@ NeuraMind is an intelligent context manager for macOS that:
 
 Perfect for anyone with ADHD, executive dysfunction, or anyone who juggles multiple projects.
 
+## Features
+
+### Focus & Context Recovery
+- **Real-Time Focus State Detection** - Monitors your focus level every 10 seconds using app-switching patterns and session depth
+- **Color-Coded Focus Overlay** - Screen border changes color based on focus state (green=focused, amber=transitioning, orange=drifting, red=active drift, purple=hyperfocus)
+- **Context Recovery Cards** - Automatically shows what you were working on when you regain focus after drifting
+
+### Planning & Reflection
+- **Morning Planning** - Set daily goals and generate an AI-powered prioritized plan with email context
+- **Wind Down Recap** - End-of-day summary comparing your actual activity against morning goals
+- **Time Tracking** - Manual task timer for projects that need explicit time tracking
+
+### Context & Memory
+- **Medication Logging** - Track when you take ADHD medication to correlate with focus patterns
+- **Semantic Search** - Find relevant past work context from your history using AI-powered search
+- **AI Conversation** - Chat with Claude about your work context and get personalized insights
+- **Automatic Activity Summaries** - Captures your screen, detects app changes, and generates AI summaries every 5 minutes
+- **Local Privacy-First Storage** - All data stays on your Mac in an encrypted SQLite database unless you explicitly enable Claude features
+
 ## System Requirements
 
 - macOS 14 (Sonoma) or later
@@ -36,8 +55,8 @@ brew install --cask neuramind
 ### From Source
 
 ```bash
-git clone https://github.com/dsatyam09/adhd_app.git
-cd adhd_app
+git clone https://github.com/dsatyam09/NeuraMind.git
+cd NeuraMind
 make bundle
 open .build/NeuraMind.app
 ```
@@ -83,4 +102,4 @@ Built by:
 
 ## Contributing
 
-Contributions welcome! Please open an issue or pull request on [GitHub](https://github.com/dsatyam09/adhd_app).
+Contributions welcome! Please open an issue or pull request on [GitHub](https://github.com/dsatyam09/NeuraMind).
