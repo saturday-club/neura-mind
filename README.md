@@ -21,21 +21,30 @@ Perfect for anyone with ADHD, executive dysfunction, or anyone who juggles multi
 ## Features
 
 ### Focus & Context Recovery
-- **Real-Time Focus State Detection** - Monitors your focus level every 10 seconds using app-switching patterns and session depth
-- **Color-Coded Focus Overlay** - Screen border changes color based on focus state (green=focused, amber=transitioning, orange=drifting, red=active drift, purple=hyperfocus)
-- **Context Recovery Cards** - Automatically shows what you were working on when you regain focus after drifting
+
+| Feature | Description |
+|---|---|
+| Real-Time Focus State Detection | Monitors your focus level every 10 seconds using app-switching patterns and session depth |
+| Color-Coded Focus Overlay | Screen border color reflects focus state: Green (focused), Amber (transitioning), Orange (drifting), Red (active drift), Purple (hyperfocus) |
+| Context Recovery Cards | Automatically shows what you were working on when you regain focus after drifting |
 
 ### Planning & Reflection
-- **Morning Planning** - Set daily goals and generate an AI-powered prioritized plan with email context
-- **Wind Down Recap** - End-of-day summary comparing your actual activity against morning goals
-- **Time Tracking** - Manual task timer for projects that need explicit time tracking
+
+| Feature | Description |
+|---|---|
+| Morning Planning | Set daily goals and generate an AI-powered prioritized plan with email context |
+| Wind Down Recap | End-of-day summary comparing your actual activity against morning goals |
+| Time Tracking | Manual task timer for projects that need explicit time tracking |
 
 ### Context & Memory
-- **Medication Logging** - Track when you take ADHD medication to correlate with focus patterns
-- **Semantic Search** - Find relevant past work context from your history using AI-powered search
-- **AI Conversation** - Chat with Claude about your work context and get personalized insights
-- **Automatic Activity Summaries** - Captures your screen, detects app changes, and generates AI summaries every 5 minutes
-- **Local Privacy-First Storage** - All data stays on your Mac in an encrypted SQLite database unless you explicitly enable Claude features
+
+| Feature | Description |
+|---|---|
+| Medication Logging | Track when you take ADHD medication to correlate with focus patterns |
+| Semantic Search | Find relevant past work context from your history using AI-powered search |
+| AI Conversation | Chat with Claude about your work context and get personalized insights |
+| Automatic Activity Summaries | Captures your screen, detects app changes, and generates AI summaries every 5 minutes |
+| Local Privacy-First Storage | All data stays on your Mac in an encrypted SQLite database unless you explicitly enable Claude features |
 
 ## System Requirements
 
