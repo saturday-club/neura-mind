@@ -232,38 +232,31 @@ enum ReportEngine {
     static func export(data: ReportData) async {
         let narrative = await generateNarrative(data: data)
 
-        let reportView = MedicalReportView(data: data, narrative: narrative)
-        let hosting = NSHostingView(rootView: reportView)
-        hosting.frame = NSRect(x: 0, y: 0, width: 700, height: 10)
-
-        // NSHostingView must be attached to a window to lay out and render correctly.
-        // Position it far off-screen so it's never visible.
-        let offscreenWindow = NSWindow(
-            contentRect: NSRect(x: -9999, y: -9999, width: 700, height: 10),
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        offscreenWindow.contentView = hosting
-        offscreenWindow.orderFrontRegardless()
-
-        hosting.layoutSubtreeIfNeeded()
-        let height = max(hosting.fittingSize.height, 500)
-        hosting.frame = NSRect(x: 0, y: 0, width: 700, height: height)
-        offscreenWindow.setContentSize(NSSize(width: 700, height: height))
-        hosting.layoutSubtreeIfNeeded()
-        hosting.display()
-
-        let pdfData = hosting.dataWithPDF(inside: hosting.bounds)
-        offscreenWindow.orderOut(nil)
-
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType.pdf]
         panel.nameFieldStringValue = "NeuraMind-Report-\(data.formattedDateRange).pdf"
         panel.title = "Save Activity Report"
         panel.prompt = "Save PDF"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? pdfData.write(to: url)
+
+        let reportView = MedicalReportView(data: data, narrative: narrative)
+            .frame(width: 700)
+            .environment(\.colorScheme, .light)
+
+        let renderer = ImageRenderer(content: reportView)
+        renderer.proposedSize = .init(width: 700, height: nil)
+
+        renderer.render { size, renderFn in
+            var box = CGRect(origin: .zero, size: size)
+            guard let ctx = CGContext(url as CFURL, mediaBox: &box, nil) else { return }
+            ctx.beginPDFPage(nil)
+            // PDF origin is bottom-left; SwiftUI origin is top-left — flip vertically
+            ctx.translateBy(x: 0, y: size.height)
+            ctx.scaleBy(x: 1, y: -1)
+            renderFn(ctx)
+            ctx.endPDFPage()
+            ctx.closePDF()
+        }
     }
 
     // MARK: LLM Narrative
