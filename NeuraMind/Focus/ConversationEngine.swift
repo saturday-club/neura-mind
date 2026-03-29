@@ -63,7 +63,7 @@ final class ConversationEngine: ObservableObject {
                     inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
                 ))
             }
-            messages.append(ConversationMessage(role: "assistant", content: response.content))
+            messages.append(ConversationMessage(role: "assistant", content: response.text))
         } catch {
             // Remove the user message that failed to get a response
             messages.removeLast()

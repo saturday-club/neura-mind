@@ -68,7 +68,7 @@ final class WindDownEngine: ObservableObject {
                     inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
                 ))
             }
-            currentRecap = response.content
+            currentRecap = response.text
         } catch {
             self.error = error.localizedDescription
         }

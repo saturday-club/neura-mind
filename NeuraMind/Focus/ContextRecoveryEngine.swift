@@ -128,7 +128,7 @@ final class ContextRecoveryEngine {
                     inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
                 ))
             }
-            let cleaned = response.content
+            let cleaned = response.text
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\"", with: "")
             return cleaned.isEmpty ? nil : cleaned

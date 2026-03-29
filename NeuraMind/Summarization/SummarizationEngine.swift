@@ -240,7 +240,13 @@ actor SummarizationEngine {
             ]
         )
 
-        let systemPrompt = PromptTemplates.template(for: .summarizationSystem)
+        var systemPrompt = PromptTemplates.template(for: .summarizationSystem)
+
+        // Inject active task context so summaries are task-aware
+        if let taskName = await TimeTrackerEngine.shared.currentTaskName {
+            systemPrompt += "\n\nThe user is currently working on: \"\(taskName)\". "
+                + "When relevant, relate the observed activity to this task."
+        }
 
         let llmResponse = try await llmClient.completeWithUsage(
             messages: [LLMMessage(role: "user", content: userPrompt)],

@@ -339,9 +339,9 @@ enum ReportEngine {
                     inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
                 ))
             }
-            let parsed = parseNarrative(response.content)
+            let parsed = parseNarrative(response.text)
             if parsed == nil {
-                print("[ReportEngine] JSON parse failed. Raw LLM response:\n\(response.content)")
+                print("[ReportEngine] JSON parse failed. Raw LLM response:\n\(response.text)")
             }
             return parsed
         } catch {

@@ -366,6 +366,11 @@ private struct GlassPanelView: View {
                 }
             }
 
+            // Smart Todo - current task from morning plan
+            GlassCard {
+                SmartTodoWidget()
+            }
+
             // Focus Overlay Controls
             OverlayControlsCard()
 

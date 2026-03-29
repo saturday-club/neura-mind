@@ -641,3 +641,214 @@ struct MenuBarTimeTracker: View {
         isAdding = false
     }
 }
+
+// MARK: - Smart Todo Widget
+
+/// Displays the current task from the morning plan with play/stop and change task.
+/// Placed in the side panel above Focus Overlay.
+struct SmartTodoWidget: View {
+    @ObservedObject private var engine = TimeTrackerEngine.shared
+    @State private var showPicker = false
+    @State private var showAllTasks = false
+
+    var body: some View {
+        let _ = engine.tick
+        let incompleteTasks = engine.tasks.filter { !$0.isCompleted }
+
+        VStack(spacing: 8) {
+            // Header - consistent with Focus Overlay card (14pt icon, 13pt semibold text)
+            HStack {
+                Image(systemName: "checklist")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.blue)
+                Text("Current Task")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                if engine.totalTaskCount > 0 {
+                    Text("\(engine.completedCount)/\(engine.totalTaskCount)")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            if let task = engine.currentTask {
+                activeTaskView(task)
+            } else if let firstIncomplete = incompleteTasks.first {
+                readyToStartView(firstIncomplete)
+            } else if engine.tasks.isEmpty {
+                emptyView
+            } else {
+                allDoneView
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Active Task
+
+    private func activeTaskView(_ task: TrackedTask) -> some View {
+        VStack(spacing: 10) {
+            // Task name
+            Text(task.name)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Current session duration
+            Text(formatDuration(task.sessions.last?.duration ?? 0))
+                .font(.system(size: 24, weight: .bold, design: .monospaced))
+                .foregroundStyle(.primary)
+
+            // Controls - icon-only, larger buttons
+            HStack(spacing: 16) {
+                Button {
+                    engine.completeTask(id: task.id)
+                    engine.nextTask()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.green)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(.green.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    engine.stopTask(id: task.id)
+                } label: {
+                    Image(systemName: "pause.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.orange)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(.orange.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+
+                Button { showPicker.toggle() } label: {
+                    Image(systemName: "arrow.triangle.swap")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(.quaternary.opacity(0.4)))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if showPicker {
+                taskPickerList
+            }
+        }
+    }
+
+    // MARK: - Ready to Start
+
+    private func readyToStartView(_ task: TrackedTask) -> some View {
+        VStack(spacing: 10) {
+            Text(task.name)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 16) {
+                Button {
+                    engine.startTask(id: task.id)
+                } label: {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.blue)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(.blue.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+
+                Button { showPicker.toggle() } label: {
+                    Image(systemName: "arrow.triangle.swap")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 48, height: 48)
+                        .background(Circle().fill(.quaternary.opacity(0.4)))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if showPicker {
+                taskPickerList
+            }
+        }
+    }
+
+    // MARK: - Empty / All Done
+
+    private var emptyView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sun.max")
+                .font(.system(size: 12))
+                .foregroundStyle(.tertiary)
+            Text("Plan your day to get started")
+                .font(.system(size: 12))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private var allDoneView: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.green)
+                Text("All tasks completed")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.green)
+                Spacer()
+            }
+
+            Button { showAllTasks.toggle() } label: {
+                Text(showAllTasks ? "Hide tasks" : "View all tasks")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+
+            if showAllTasks {
+                taskPickerList
+            }
+        }
+    }
+
+    // MARK: - Task Picker
+
+    private var taskPickerList: some View {
+        VStack(spacing: 2) {
+            Divider().opacity(0.3)
+            ForEach(engine.tasks) { task in
+                Button {
+                    if !task.isCompleted {
+                        engine.startTask(id: task.id)
+                        showPicker = false
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : (task.isRunning ? "circle.inset.filled" : "circle"))
+                            .font(.system(size: 10))
+                            .foregroundStyle(task.isCompleted ? .green : (task.isRunning ? .blue : .secondary))
+                        Text(task.name)
+                            .font(.system(size: 11))
+                            .strikethrough(task.isCompleted)
+                            .foregroundStyle(task.isCompleted ? .tertiary : (task.isRunning ? .primary : .secondary))
+                            .lineLimit(1)
+                        Spacer()
+                        if task.totalDuration > 0 {
+                            Text(formatDuration(task.totalDuration))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(task.isCompleted)
+            }
+        }
+    }
+}
