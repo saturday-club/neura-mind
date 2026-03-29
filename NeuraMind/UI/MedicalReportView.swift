@@ -250,9 +250,6 @@ enum ReportEngine {
             var box = CGRect(origin: .zero, size: size)
             guard let ctx = CGContext(url as CFURL, mediaBox: &box, nil) else { return }
             ctx.beginPDFPage(nil)
-            // PDF origin is bottom-left; SwiftUI origin is top-left — flip vertically
-            ctx.translateBy(x: 0, y: size.height)
-            ctx.scaleBy(x: 1, y: -1)
             renderFn(ctx)
             ctx.endPDFPage()
             ctx.closePDF()
