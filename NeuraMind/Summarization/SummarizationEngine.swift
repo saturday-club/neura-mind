@@ -277,7 +277,8 @@ actor SummarizationEngine {
 
         let record = try buildSummaryRecord(
             chunk: chunk, summary: parsed.summary, keyTopics: parsed.keyTopics,
-            documentPaths: allDocPaths, browserURLs: allURLs, activityType: parsed.activityType
+            documentPaths: allDocPaths, browserURLs: allURLs, activityType: parsed.activityType,
+            medicationActive: MedicationManager.currentState
         )
         let inserted = try storageManager.insertSummary(record)
         try storageManager.markCapturesAsSummarized(ids: chunk.captureIds)
@@ -295,7 +296,8 @@ actor SummarizationEngine {
         keyTopics: [String],
         documentPaths: [String],
         browserURLs: [String],
-        activityType: String?
+        activityType: String?,
+        medicationActive: Bool
     ) throws -> SummaryRecord {
         let encoder = JSONEncoder()
         let appNamesJSON = try String(data: encoder.encode(chunk.appNames), encoding: .utf8) ?? "[]"
@@ -316,7 +318,8 @@ actor SummarizationEngine {
             captureIds: captureIdsJSON,
             documentPaths: docPathsJSON,
             browserURLs: urlsJSON,
-            activityType: activityType
+            activityType: activityType,
+            medicationActive: medicationActive
         )
     }
 

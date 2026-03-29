@@ -360,6 +360,24 @@ final class AppDatabase: Sendable {
             }
         }
 
+        migrator.registerMigration("v11_medicationTracking") { db in
+            // Append-only log of every medication toggle event.
+            // Historical so we can reconstruct state at any past timestamp.
+            try db.create(table: "medication_log") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("timestamp", .double).notNull()
+                t.column("isActive", .boolean).notNull()
+            }
+            try db.create(index: "idx_medication_log_timestamp",
+                          on: "medication_log", columns: ["timestamp"])
+
+            // Stamp each summary with the medication state active at write time.
+            // Nullable so existing rows get NULL (treated as false in queries).
+            try db.alter(table: "summaries") { t in
+                t.add(column: "medicationActive", .boolean).defaults(to: false)
+            }
+        }
+
         return migrator
     }
 }
