@@ -32,7 +32,7 @@ struct NeuraMindApp: App {
         // Cmd+Shift+N → NeuraMind Daily Assistant panel
         HotkeyManager.shared.onSecondaryHotkey = {
             Task { @MainActor in
-                ServiceContainer.shared.neuraMindController?.showMorning()
+                ServiceContainer.shared.neuraMindController?.toggle()
             }
         }
         HotkeyManager.shared.register()
@@ -110,11 +110,8 @@ private struct MenuBarContent: View {
                     onOpenEnrichment: {
                         services.panelController?.toggle()
                     },
-                    onOpenGoodMorning: {
-                        services.neuraMindController?.showMorning()
-                    },
-                    onOpenWindDown: {
-                        services.neuraMindController?.showWindDown()
+                    onOpenDailyAssistant: {
+                        services.neuraMindController?.toggle()
                     },
                     onOpenDebug: {
                         services.debugController?.toggle()
