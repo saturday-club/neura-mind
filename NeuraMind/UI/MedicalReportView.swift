@@ -12,11 +12,27 @@ struct FocusBlock {
     let durationMinutes: Double
 }
 
+struct SessionAnalysis {
+    let time: String
+    let duration: String
+    let work: String
+    let quality: String   // "high" | "moderate" | "fragmented"
+}
+
+struct DistractionPeriod {
+    let time: String
+    let duration: String
+    let pattern: String
+}
+
 struct LLMNarrative {
     let executiveSummary: String
-    let focusObservations: String
-    let dailyNotes: [String: String]   // "YYYY-MM-DD" → one sentence
+    let focusSessions: [SessionAnalysis]
+    let distractionPeriods: [DistractionPeriod]
+    let workSummary: String
+    let behavioralObservations: String
     let medicationNote: String?
+    let clinicalNotes: String
 }
 
 // MARK: - Report Data
@@ -263,41 +279,66 @@ enum ReportEngine {
         let statsBlock = buildStatsBlock(data: data)
 
         let systemPrompt = """
-        You are an ADHD behavioral analyst generating a clinical activity report.
-        Write in clear, professional language suitable for a doctor or therapist.
-        Be specific and factual. Do not diagnose or recommend medication changes.
+        You are an ADHD behavioral analyst generating a detailed clinical activity report for a doctor or therapist.
+        You have access to a minute-by-minute timeline of the user's computer activity.
+        Write in clear, professional clinical language. Be specific — reference actual times, durations, and activities.
+        Do not diagnose or recommend medication changes.
         Always respond with valid JSON only — no markdown, no code fences.
         """
 
         let userPrompt = """
-        Generate a narrative analysis for this behavioral activity report.
+        Analyze this behavioral activity data and generate a detailed clinical report.
 
         \(statsBlock)
 
-        Respond with this JSON structure:
+        Respond with this exact JSON structure:
         {
-          "executive_summary": "2-3 sentences summarizing the overall period and key patterns",
-          "focus_observations": "1-2 sentences about focus quality, consistency, and context switching",
-          "daily_notes": { "YYYY-MM-DD": "one sentence per day describing what was worked on and focus quality" },
-          "medication_note": "one sentence about medication impact on focus patterns, or null if only one state present"
+          "executive_summary": "3-4 sentences summarizing the overall period, key patterns, and clinical relevance",
+          "focus_sessions": [
+            {
+              "time": "exact time range e.g. 9:05 AM – 10:42 AM",
+              "duration": "e.g. 97 min",
+              "work": "Detailed description of exactly what was worked on — be specific about tasks, tools, topics",
+              "quality": "high | moderate | fragmented"
+            }
+          ],
+          "distraction_periods": [
+            {
+              "time": "exact time range",
+              "duration": "e.g. 23 min",
+              "pattern": "Specific description of the wandering pattern — which apps, what kind of switching, any identifiable trigger"
+            }
+          ],
+          "work_summary": "2-3 paragraph analysis of what was accomplished, what type of work dominated, how productive the session was relative to time spent",
+          "behavioral_observations": "2-3 paragraph clinical analysis of attention patterns, context-switching behavior, hyperfocus indicators, fatigue signs, and any ADHD-relevant patterns observed in the timeline",
+          "medication_note": "one sentence about medication impact on focus, or null if only one medication state is present",
+          "clinical_notes": "2-3 paragraph summary written for a medical professional — include time-of-day patterns, sustained attention capacity, task-switching frequency, and any observations relevant to ADHD assessment or treatment monitoring"
         }
+
+        Rules:
+        - focus_sessions should only include genuine sustained work periods (at least 10 continuous minutes)
+        - distraction_periods should cover gaps and fragmented activity between work periods
+        - Be specific about times — use the actual timestamps from the data
+        - If there are no distraction periods, return an empty array
         """
 
         do {
             let response = try await llm.complete(
                 messages: [LLMMessage(role: "user", content: userPrompt)],
                 model: "anthropic/claude-haiku-4-5",
-                maxTokens: 600,
+                maxTokens: 2000,
                 systemPrompt: systemPrompt,
                 temperature: 0.2
             )
-            return parseNarrative(response, data: data)
+            return parseNarrative(response)
         } catch {
             return nil
         }
     }
 
     private static func buildStatsBlock(data: ReportData) -> String {
+        let tf = DateFormatter(); tf.dateStyle = .none; tf.timeStyle = .short
+
         let med = data.medicationDayCounts
         let medStr: String
         if med.on > 0 && med.off > 0 {
@@ -314,17 +355,38 @@ enum ReportEngine {
             return "  \(app): \(formatMinutes(mins)) (\(pct)%)"
         }.joined(separator: "\n")
 
-        let blockLines = data.focusBlocks.prefix(8).map { b in
-            let tf = DateFormatter(); tf.dateStyle = .none; tf.timeStyle = .short
-            return "  \(tf.string(from: b.startDate))–\(tf.string(from: b.endDate)) | \(Int(b.durationMinutes)) min | \(b.primaryApp)\(b.activityType.map { " | \($0)" } ?? "")"
-        }.joined(separator: "\n")
-
         let actLines = data.activityBreakdown.map { "\($0.type) \($0.percent)%" }.joined(separator: ", ")
+
+        // Build a detailed work period timeline with actual session content
+        var timelineLines: [String] = []
+        for (i, period) in data.workPeriods.enumerated() {
+            guard let first = period.first, let last = period.last else { continue }
+            let dur = Int((last.endTimestamp - first.startTimestamp) / 60)
+            timelineLines.append("WORK PERIOD \(i + 1): \(tf.string(from: first.startDate)) – \(tf.string(from: last.endDate)) (\(dur) min, \(period.count) sessions)")
+            for s in period.prefix(15) {
+                let act = s.activityType.map { " [\($0)]" } ?? ""
+                timelineLines.append("  \(tf.string(from: s.startDate))\(act): \(s.summary)")
+            }
+            if period.count > 15 {
+                timelineLines.append("  ... and \(period.count - 15) more sessions")
+            }
+            // Show gap to next period
+            if i < data.workPeriods.count - 1,
+               let nextFirst = data.workPeriods[i + 1].first {
+                let gapMins = Int((nextFirst.startTimestamp - last.endTimestamp) / 60)
+                if gapMins > 0 {
+                    timelineLines.append("  ↳ GAP: \(gapMins) min until next work period (\(tf.string(from: last.endDate)) – \(tf.string(from: nextFirst.startDate)))")
+                }
+            }
+            timelineLines.append("")
+        }
+        let timeline = timelineLines.isEmpty ? "  (no work periods detected)" : timelineLines.joined(separator: "\n")
 
         return """
         PERIOD: \(data.formatDay(data.from)) – \(data.formatDay(data.to))
-        TOTAL SESSIONS: \(data.summaries.count) | TOTAL TIME: \(data.formattedDuration)
-        AVG WORK PERIOD: \(String(format: "%.0f", data.avgWorkPeriodMinutes)) min | FOCUS BLOCKS (≥15 min): \(data.focusBlocks.count)
+        TOTAL RECORDED TIME: \(data.formattedDuration) across \(data.summaries.count) sessions
+        WORK PERIODS: \(data.workPeriods.count) | AVG DURATION: \(String(format: "%.0f", data.avgWorkPeriodMinutes)) min
+        FOCUS BLOCKS (≥15 min sustained): \(data.focusBlocks.count)
         APP SWITCHES/HOUR (within work periods): \(String(format: "%.1f", data.switchesPerHour))
         MEDICATION: \(medStr)
         ACTIVITY BREAKDOWN: \(actLines.isEmpty ? "not available" : actLines)
@@ -332,15 +394,12 @@ enum ReportEngine {
         APP USAGE:
         \(appLines.isEmpty ? "  (no data)" : appLines)
 
-        FOCUS BLOCKS:
-        \(blockLines.isEmpty ? "  (no sustained focus blocks detected)" : blockLines)
-
-        DAILY SUMMARIES:
-        \(data.dailySummaryContext)
+        DETAILED SESSION TIMELINE:
+        \(timeline)
         """
     }
 
-    private static func parseNarrative(_ response: String, data: ReportData) -> LLMNarrative? {
+    private static func parseNarrative(_ response: String) -> LLMNarrative? {
         var cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.hasPrefix("```") {
             cleaned = cleaned.components(separatedBy: "\n").dropFirst().joined(separator: "\n")
@@ -350,16 +409,29 @@ enum ReportEngine {
               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
         else { return nil }
 
-        var dailyNotes: [String: String] = [:]
-        if let notes = json["daily_notes"] as? [String: String] {
-            dailyNotes = notes
+        let focusSessions: [SessionAnalysis] = (json["focus_sessions"] as? [[String: Any]] ?? []).compactMap { item in
+            guard let time = item["time"] as? String,
+                  let duration = item["duration"] as? String,
+                  let work = item["work"] as? String,
+                  let quality = item["quality"] as? String else { return nil }
+            return SessionAnalysis(time: time, duration: duration, work: work, quality: quality)
+        }
+
+        let distractionPeriods: [DistractionPeriod] = (json["distraction_periods"] as? [[String: Any]] ?? []).compactMap { item in
+            guard let time = item["time"] as? String,
+                  let duration = item["duration"] as? String,
+                  let pattern = item["pattern"] as? String else { return nil }
+            return DistractionPeriod(time: time, duration: duration, pattern: pattern)
         }
 
         return LLMNarrative(
             executiveSummary: json["executive_summary"] as? String ?? "",
-            focusObservations: json["focus_observations"] as? String ?? "",
-            dailyNotes: dailyNotes,
-            medicationNote: json["medication_note"] as? String
+            focusSessions: focusSessions,
+            distractionPeriods: distractionPeriods,
+            workSummary: json["work_summary"] as? String ?? "",
+            behavioralObservations: json["behavioral_observations"] as? String ?? "",
+            medicationNote: json["medication_note"] as? String,
+            clinicalNotes: json["clinical_notes"] as? String ?? ""
         )
     }
 }
@@ -374,17 +446,33 @@ struct MedicalReportView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             rule
-            if let n = narrative {
-                narrativeSummarySection(n)
-                rule
-            }
             statsAtAGlance
             rule
             if !data.focusBlocks.isEmpty {
                 focusBlocksSection
                 rule
             }
-            dailyBreakdownSection
+            if let n = narrative {
+                executiveSummarySection(n)
+                rule
+                focusSessionsSection(n)
+                if !n.distractionPeriods.isEmpty {
+                    rule
+                    distractionPeriodsSection(n)
+                }
+                rule
+                workSummarySection(n)
+                rule
+                behavioralSection(n)
+                if !n.clinicalNotes.isEmpty {
+                    rule
+                    clinicalNotesSection(n)
+                }
+                if let medNote = n.medicationNote {
+                    rule
+                    medicationNoteSection(medNote)
+                }
+            }
             medicationSection
             footer
         }
@@ -430,40 +518,165 @@ struct MedicalReportView: View {
         .padding(.bottom, 16)
     }
 
-    // MARK: LLM Narrative
+    // MARK: LLM Analytical Sections
 
     @ViewBuilder
-    private func narrativeSummarySection(_ n: LLMNarrative) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionLabel("ANALYSIS")
+    private func executiveSummarySection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("EXECUTIVE SUMMARY")
+            Text(n.executiveSummary)
+                .font(.system(size: 12))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 14)
+    }
 
-            if !n.executiveSummary.isEmpty {
-                Text(n.executiveSummary)
-                    .font(.system(size: 12))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !n.focusObservations.isEmpty {
-                Text(n.focusObservations)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color(white: 0.25))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let medNote = n.medicationNote {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "pill.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.blue)
-                        .padding(.top, 1)
-                    Text(medNote)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color(white: 0.3))
-                        .fixedSize(horizontal: false, vertical: true)
+    @ViewBuilder
+    private func focusSessionsSection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("FOCUS SESSIONS")
+            if n.focusSessions.isEmpty {
+                Text("No sustained focus sessions detected in this period.")
+                    .font(.system(size: 11)).foregroundStyle(Color(white: 0.45))
+            } else {
+                ForEach(Array(n.focusSessions.enumerated()), id: \.offset) { _, session in
+                    focusSessionRow(session)
                 }
-                .padding(8)
-                .background(Color.blue.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 5))
             }
         }
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private func focusSessionRow(_ s: SessionAnalysis) -> some View {
+        let qualityColor: Color = s.quality == "high" ? .green : s.quality == "moderate" ? .orange : .red
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Text(s.time)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+                Text("·")
+                    .foregroundStyle(Color(white: 0.6))
+                Text(s.duration)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.45))
+                Spacer()
+                Text(s.quality)
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(qualityColor)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(qualityColor.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+            }
+            Text(s.work)
+                .font(.system(size: 11))
+                .foregroundStyle(Color(white: 0.15))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .background(Color(white: 0.975))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+    }
+
+    @ViewBuilder
+    private func distractionPeriodsSection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionLabel("DISTRACTION & WANDERING PERIODS")
+            ForEach(Array(n.distractionPeriods.enumerated()), id: \.offset) { _, period in
+                distractionRow(period)
+            }
+        }
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private func distractionRow(_ d: DistractionPeriod) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Text(d.time)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.35))
+                Text("·")
+                    .foregroundStyle(Color(white: 0.6))
+                Text(d.duration)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color(white: 0.45))
+            }
+            Text(d.pattern)
+                .font(.system(size: 11))
+                .foregroundStyle(Color(white: 0.25))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.05))
+        .overlay(
+            RoundedRectangle(cornerRadius: 5)
+                .strokeBorder(Color.orange.opacity(0.2), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+    }
+
+    @ViewBuilder
+    private func workSummarySection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("WORK & PRODUCTIVITY ANALYSIS")
+            Text(n.workSummary)
+                .font(.system(size: 12))
+                .foregroundStyle(Color(white: 0.15))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private func behavioralSection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("BEHAVIORAL OBSERVATIONS")
+            Text(n.behavioralObservations)
+                .font(.system(size: 12))
+                .foregroundStyle(Color(white: 0.15))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private func clinicalNotesSection(_ n: LLMNarrative) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("CLINICAL NOTES  (for treating physician / therapist)")
+            Text(n.clinicalNotes)
+                .font(.system(size: 12))
+                .foregroundStyle(Color(white: 0.15))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(Color.blue.opacity(0.03))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(Color.blue.opacity(0.15), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.vertical, 14)
+    }
+
+    @ViewBuilder
+    private func medicationNoteSection(_ note: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "pill.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.blue)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 4) {
+                sectionLabel("MEDICATION NOTE")
+                Text(note)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(white: 0.2))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(Color.blue.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .padding(.vertical, 14)
     }
 
@@ -544,123 +757,6 @@ struct MedicalReportView: View {
                     .foregroundStyle(activityColor(activity))
             }
         }
-        thinLine
-    }
-
-    // MARK: App Usage
-
-    private var appUsageSection: some View {
-        let top = data.appTimes.prefix(7)
-        let maxMins = top.first?.minutes ?? 1
-
-        return VStack(alignment: .leading, spacing: 8) {
-            sectionLabel("APP USAGE")
-            ForEach(Array(top), id: \.app) { app, mins in
-                HStack(spacing: 8) {
-                    Text(app)
-                        .font(.system(size: 11))
-                        .frame(width: 130, alignment: .leading)
-                    Text(formatMinutes(mins))
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.4))
-                        .frame(width: 52, alignment: .trailing)
-                    GeometryReader { geo in
-                        Rectangle()
-                            .fill(Color.blue.opacity(0.25))
-                            .frame(width: geo.size.width * CGFloat(mins / maxMins))
-                    }
-                    .frame(height: 10)
-                    let pct = data.totalRecordedSeconds > 0
-                        ? Int(mins * 60 / data.totalRecordedSeconds * 100) : 0
-                    Text("\(pct)%")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.4))
-                        .frame(width: 32, alignment: .trailing)
-                }
-            }
-        }
-        .padding(.vertical, 14)
-    }
-
-    // MARK: Daily Breakdown
-
-    private var dailyBreakdownSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            sectionLabel("DAILY BREAKDOWN")
-                .padding(.bottom, 10)
-            ForEach(data.byDay, id: \.date) { date, daySummaries, onMed in
-                daySection(date: date, summaries: daySummaries,
-                           onMed: onMed, note: narrative?.dailyNotes[data.iso(date)])
-            }
-        }
-        .padding(.top, 14)
-    }
-
-    @ViewBuilder
-    private func daySection(date: Date, summaries: [SummaryRecord],
-                             onMed: Bool, note: String?) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Day header
-            HStack(spacing: 8) {
-                Text(data.formatDay(date))
-                    .font(.system(size: 13, weight: .semibold))
-                Text(onMed ? "💊 On medication" : "Off medication")
-                    .font(.system(size: 10))
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(onMed ? Color.blue.opacity(0.1) : Color(white: 0.93))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .foregroundStyle(onMed ? Color.blue : Color(white: 0.4))
-                Spacer()
-                Text("\(summaries.count) sessions · \(formatMinutes(summaries.reduce(0) { $0 + ($1.endTimestamp - $1.startTimestamp) } / 60))")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color(white: 0.45))
-            }
-            .padding(.vertical, 8)
-
-            // LLM daily note
-            if let note = note, !note.isEmpty {
-                Text(note)
-                    .font(.system(size: 11)).italic()
-                    .foregroundStyle(Color(white: 0.35))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 8)
-            }
-
-            // Sessions
-            ForEach(summaries, id: \.startTimestamp) { s in
-                sessionRow(s)
-            }
-        }
-        .padding(.bottom, 12)
-    }
-
-    @ViewBuilder
-    private func sessionRow(_ s: SummaryRecord) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text(timeRange(s.startDate, s.endDate))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(Color(white: 0.45))
-                .frame(width: 118, alignment: .leading)
-
-            if let activity = s.activityType {
-                Text(activity)
-                    .font(.system(size: 9, weight: .medium))
-                    .padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(activityColor(activity).opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 3))
-                    .foregroundStyle(activityColor(activity))
-                    .frame(width: 80, alignment: .leading)
-            } else {
-                Color.clear.frame(width: 80, height: 1)
-            }
-
-            Text(s.summary)
-                .font(.system(size: 11))
-                .foregroundStyle(Color(white: 0.15))
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.vertical, 3)
         thinLine
     }
 
