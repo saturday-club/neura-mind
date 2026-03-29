@@ -5,6 +5,7 @@ import SwiftUI
 
 enum NeuraMindMainTab: String, CaseIterable {
     case dailyAssistant = "Daily Assistant"
+    case timeTracker    = "Time Tracker"
     case workPatterns   = "Work Patterns"
 }
 
@@ -94,7 +95,7 @@ final class NeuraMindPanelController {
         )
 
         let p = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 660, height: 580),
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 580),
             styleMask: [.titled, .closable, .resizable, .utilityWindow],
             backing: .buffered,
             defer: false
@@ -103,6 +104,8 @@ final class NeuraMindPanelController {
         p.level = .floating
         p.isFloatingPanel = true
         p.hidesOnDeactivate = false
+        p.titlebarAppearsTransparent = true
+        p.isMovableByWindowBackground = true
         p.contentView = NSHostingView(rootView: contentView)
         p.isReleasedWhenClosed = false
         p.becomesKeyOnlyIfNeeded = false
@@ -122,17 +125,28 @@ struct NeuraMindPanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $state.mainTab) {
+            // Glass tab bar
+            HStack(spacing: 2) {
                 ForEach(NeuraMindMainTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    GlassTabButton(
+                        title: tab.rawValue,
+                        icon: tabIcon(tab),
+                        isSelected: state.mainTab == tab
+                    ) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            state.mainTab = tab
+                        }
+                    }
                 }
             }
-            .pickerStyle(.segmented)
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            )
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 8)
-
-            Divider()
 
             Group {
                 switch state.mainTab {
@@ -144,6 +158,8 @@ struct NeuraMindPanelView: View {
                         conversationEngine: conversationEngine,
                         emailFetcher: emailFetcher
                     )
+                case .timeTracker:
+                    TimeTrackerView(engine: TimeTrackerEngine.shared)
                 case .workPatterns:
                     WorkPatternsTab(storageManager: storageManager)
                 }
@@ -151,6 +167,14 @@ struct NeuraMindPanelView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 580, minHeight: 480)
+    }
+
+    private func tabIcon(_ tab: NeuraMindMainTab) -> String {
+        switch tab {
+        case .dailyAssistant: return "brain.head.profile"
+        case .timeTracker:    return "clock.fill"
+        case .workPatterns:   return "chart.bar.fill"
+        }
     }
 }
 
@@ -165,16 +189,27 @@ struct DailyAssistantTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $state.subTab) {
+            // Glass sub-tab picker
+            HStack(spacing: 2) {
                 ForEach(DailySubTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+                    GlassTabButton(
+                        title: tab.rawValue,
+                        icon: subTabIcon(tab),
+                        isSelected: state.subTab == tab
+                    ) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            state.subTab = tab
+                        }
+                    }
                 }
             }
-            .pickerStyle(.segmented)
+            .padding(4)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(.quaternary.opacity(0.3))
+            )
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-
-            Divider()
 
             Group {
                 switch state.subTab {
@@ -187,6 +222,14 @@ struct DailyAssistantTab: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func subTabIcon(_ tab: DailySubTab) -> String {
+        switch tab {
+        case .goodMorning: return "sun.max.fill"
+        case .windDown:    return "moon.fill"
+        case .chat:        return "bubble.left.and.bubble.right"
         }
     }
 }
@@ -222,11 +265,17 @@ struct GoodMorningView: View {
                         .frame(minHeight: 80, maxHeight: 140)
                         .scrollContentBackground(.hidden)
                         .padding(8)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.12), .white.opacity(0.04)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
                         )
                 }
 
@@ -290,9 +339,10 @@ struct GoodMorningView: View {
 
                 // Generated plan
                 if let plan = engine.currentPlan {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(.yellow)
                             Text("Your Day Plan").font(.subheadline.bold())
                             Spacer()
                             Button(action: { copyText(plan) }) {
@@ -301,11 +351,26 @@ struct GoodMorningView: View {
                             .buttonStyle(.plain).foregroundStyle(.secondary)
                             .help("Copy to clipboard")
                         }
-                        Text(plan)
+                        Text(stripMarkdown(plan))
                             .font(.body)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.15), .white.opacity(0.05)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 0.5
+                                    )
+                            )
+                    )
                 }
             }
             .padding(20)
@@ -373,9 +438,10 @@ struct WindDownView: View {
                 }
 
                 if let recap = engine.currentRecap {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack {
+                            Image(systemName: "moon.stars")
+                                .foregroundStyle(.indigo)
                             Text("Day Recap").font(.subheadline.bold())
                             Spacer()
                             Button(action: { copyText(recap) }) {
@@ -384,11 +450,26 @@ struct WindDownView: View {
                             .buttonStyle(.plain).foregroundStyle(.secondary)
                             .help("Copy to clipboard")
                         }
-                        Text(recap)
+                        Text(stripMarkdown(recap))
                             .font(.body)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.15), .white.opacity(0.05)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 0.5
+                                    )
+                            )
+                    )
                 }
             }
             .padding(20)
@@ -462,18 +543,24 @@ struct ChatView: View {
 
             Divider()
 
-            // Input row
+            // Glass input row
             HStack(spacing: 8) {
                 TextField("Ask about your day...", text: $inputText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .focused($isInputFocused)
                     .lineLimit(1...4)
-                    .padding(8)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.12), .white.opacity(0.04)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 0.5
+                            )
                     )
                     .onSubmit { sendIfPossible() }
 
@@ -528,29 +615,49 @@ struct ChatBubble: View {
     let message: ConversationMessage
 
     var body: some View {
+        let isUser = message.role == "user"
+        let displayText = isUser ? message.content : stripMarkdown(message.content)
+
         HStack(alignment: .top, spacing: 8) {
-            if message.role == "assistant" {
+            if !isUser {
                 Image(systemName: "brain.head.profile")
-                    .font(.caption).foregroundStyle(.blue)
-                    .frame(width: 20).padding(.top, 3)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.blue.opacity(0.8))
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(.blue.opacity(0.08)))
+                    .padding(.top, 2)
             }
 
-            Text(message.content)
+            Text(displayText)
                 .font(.body)
                 .textSelection(.enabled)
-                .padding(10)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
                 .background(
-                    message.role == "user"
-                        ? Color.accentColor.opacity(0.1)
-                        : Color(nsColor: .controlBackgroundColor)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(isUser ? AnyShapeStyle(Color.accentColor.opacity(0.08)) : AnyShapeStyle(.ultraThinMaterial))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: isUser
+                                            ? [Color.accentColor.opacity(0.15), Color.accentColor.opacity(0.05)]
+                                            : [.white.opacity(0.12), .white.opacity(0.04)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.5
+                                )
+                        )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
+                .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
 
-            if message.role == "user" {
+            if isUser {
                 Image(systemName: "person.circle.fill")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .frame(width: 20).padding(.top, 3)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary.opacity(0.6))
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(.secondary.opacity(0.08)))
+                    .padding(.top, 2)
             }
         }
     }
@@ -728,4 +835,71 @@ struct SummaryRow: View {
         default:              return .gray
         }
     }
+}
+
+// MARK: - Glass Tab Button
+
+struct GlassTabButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .medium))
+                Text(title)
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+            }
+            .foregroundStyle(isSelected ? .primary : .secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(tabBackground)
+            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+
+    @ViewBuilder
+    private var tabBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(.white.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
+        } else if isHovered {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(.white.opacity(0.03))
+        } else {
+            Color.clear
+        }
+    }
+}
+
+// MARK: - Markdown Stripping
+
+/// Strips common markdown formatting artifacts from LLM output so it renders
+/// as clean plain text in the UI (no ** bold **, # headers, backticks, etc.).
+func stripMarkdown(_ text: String) -> String {
+    var s = text
+    // Bold: **text** or __text__
+    s = s.replacingOccurrences(of: "\\*\\*(.+?)\\*\\*", with: "$1", options: .regularExpression)
+    s = s.replacingOccurrences(of: "__(.+?)__", with: "$1", options: .regularExpression)
+    // Italic: *text* (after bold is already stripped)
+    s = s.replacingOccurrences(of: "(?<=\\s|^)\\*(.+?)\\*(?=\\s|$|[.,;:!?])", with: "$1", options: .regularExpression)
+    // Headers: # ## ### at line start
+    s = s.replacingOccurrences(of: "(?m)^#{1,6}\\s+", with: "", options: .regularExpression)
+    // Inline code backticks
+    s = s.replacingOccurrences(of: "`([^`]+)`", with: "$1", options: .regularExpression)
+    // Horizontal rules
+    s = s.replacingOccurrences(of: "(?m)^[\\-\\*_]{3,}$", with: "", options: .regularExpression)
+    return s
 }

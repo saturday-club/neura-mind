@@ -9,7 +9,6 @@ struct MenuBarView: View {
     @ObservedObject var permissionManager: PermissionManager
     var storageManager: StorageManager?
 
-    var onOpenEnrichment: () -> Void
     var onOpenDailyAssistant: () -> Void
     var onOpenDebug: () -> Void
 
@@ -82,7 +81,12 @@ struct MenuBarView: View {
 
             IntervalIndicatorView(captureEngine: captureEngine)
             .padding(.horizontal, 16)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
+
+            // Compact time tracker
+            MenuBarTimeTracker()
+                .padding(.horizontal, 16)
+                .padding(.bottom, 10)
 
             Divider()
                 .padding(.horizontal, 12)
@@ -110,7 +114,6 @@ struct MenuBarView: View {
 
             ActionsView(
                 captureEngine: captureEngine,
-                onOpenEnrichment: onOpenEnrichment,
                 onOpenDailyAssistant: onOpenDailyAssistant,
                 onOpenDebug: onOpenDebug
             )

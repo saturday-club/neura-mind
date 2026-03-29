@@ -41,7 +41,7 @@ final class CaptureEngine: ObservableObject {
     let logger = DualLogger(category: "CaptureEngine")
 
     /// The base interval between captures in seconds (used when adaptive is off).
-    var captureInterval: TimeInterval = 10.0
+    var captureInterval: TimeInterval = 5.0
 
     /// Maximum time between keyframes in seconds.
     var maxKeyframeInterval: TimeInterval = 60
@@ -114,7 +114,7 @@ final class CaptureEngine: ObservableObject {
 
     /// Current capture speed preset. Stored in UserDefaults.
     /// @Published so SwiftUI observes changes from the speed picker.
-    @Published var captureSpeed: CaptureSpeed = .medium {
+    @Published var captureSpeed: CaptureSpeed = .fast {
         didSet {
             captureInterval = captureSpeed.baseInterval
             UserDefaults.standard.set(captureSpeed.rawValue, forKey: "captureSpeed")

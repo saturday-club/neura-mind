@@ -18,7 +18,14 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
             ],
             path: "NeuraMind",
-            exclude: ["Assets.xcassets"]
+            exclude: ["Assets.xcassets"],
+            resources: [
+                .process("Resources/")
+            ],
+            linkerSettings: [
+                .linkedFramework("Metal"),
+                .linkedFramework("QuartzCore")
+            ]
         ),
         .testTarget(
             name: "NeuraMindTests",

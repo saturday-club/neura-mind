@@ -229,8 +229,6 @@ struct FocusStatusView: View {
 /// Shows capture speed picker and current interval status.
 struct IntervalIndicatorView: View {
     @ObservedObject var captureEngine: CaptureEngine
-    @AppStorage("contextRecoveryEnabled") private var contextRecoveryEnabled = false
-
     var body: some View {
         VStack(spacing: 6) {
             // Speed picker - segmented control
@@ -255,18 +253,6 @@ struct IntervalIndicatorView: View {
             .padding(2)
             .background(.quaternary.opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 7))
-
-            // Context Recovery toggle
-            HStack(spacing: 4) {
-                Text("Context Recovery")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Toggle("", isOn: $contextRecoveryEnabled)
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .labelsHidden()
-            }
 
             // Current status line
             HStack(spacing: 4) {
@@ -498,5 +484,160 @@ struct WarningBannerView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Menu Bar Time Tracker
+
+/// Compact time tracker widget for the menu bar dropdown.
+/// Shows current task with play/pause, quick-add, and today's total.
+struct MenuBarTimeTracker: View {
+    @ObservedObject private var engine = TimeTrackerEngine.shared
+    @State private var newTaskName = ""
+    @State private var isAdding = false
+
+    var body: some View {
+        let _ = engine.tick
+
+        VStack(spacing: 5) {
+            if let activeID = engine.activeTaskID,
+               let task = engine.tasks.first(where: { $0.id == activeID }) {
+                activeTaskRow(task)
+            } else if isAdding {
+                addTaskRow
+            } else {
+                idleRow
+            }
+
+            // Today's total (only if there's tracked time)
+            if engine.todayTotal > 0 || engine.activeTaskID != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                    Text("Today: \(formatDuration(engine.todayTotal))")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if engine.tasks.count > 1 {
+                        Text("\(engine.tasks.count) tasks")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.quaternary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.quaternary.opacity(0.35))
+        )
+    }
+
+    // Active task: name + timer + pause + add buttons
+    private func activeTaskRow(_ task: TrackedTask) -> some View {
+        HStack(spacing: 6) {
+            Button { engine.stopTask(id: task.id) } label: {
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(.orange.opacity(0.15)))
+            }
+            .buttonStyle(.plain)
+
+            Text(task.name)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer()
+
+            Text(formatDuration(task.totalDuration))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.primary)
+
+            Button { isAdding = true } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .background(Circle().fill(.quaternary.opacity(0.5)))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // Inline task name input
+    private var addTaskRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "clock.badge.checkmark")
+                .font(.system(size: 11))
+                .foregroundStyle(.blue.opacity(0.7))
+
+            TextField("Task name...", text: $newTaskName)
+                .textFieldStyle(.plain)
+                .font(.system(size: 11))
+                .onSubmit { submitNewTask() }
+
+            if !newTaskName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button(action: submitNewTask) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.white)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().fill(.blue))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button { isAdding = false; newTaskName = "" } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // No task active -- show start button
+    private var idleRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "clock")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            Text("Time Tracker")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Button { isAdding = true } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 8, weight: .bold))
+                    Text("Start")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundStyle(.blue)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(.blue.opacity(0.1)))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func submitNewTask() {
+        let name = newTaskName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        engine.addTask(name: name)
+        if let first = engine.tasks.first {
+            engine.startTask(id: first.id)
+        }
+        newTaskName = ""
+        isAdding = false
     }
 }

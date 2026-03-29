@@ -41,7 +41,6 @@ struct SettingsView: View {
     @AppStorage("enrichmentPass2Model") private var enrichmentPass2Model: String = Defaults.enrichmentPass2Model
 
     // NeuraMind Settings
-    @AppStorage("contextRecoveryEnabled") private var contextRecoveryEnabled: Bool = false
     @AppStorage("emailProvider") private var emailProvider: String = EmailProvider.none.rawValue
 
     // Capture Settings
@@ -179,11 +178,6 @@ struct SettingsView: View {
             }
 
             Section("NeuraMind") {
-                Toggle("Context Recovery", isOn: $contextRecoveryEnabled)
-                Text("After drifting for 5+ minutes, shows a one-line card reminding you what you were working on when you return.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
                 Picker("Email/calendar provider:", selection: $emailProvider) {
                     ForEach(EmailProvider.allCases, id: \.rawValue) { provider in
                         Text(provider.displayName).tag(provider.rawValue)

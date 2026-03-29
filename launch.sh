@@ -10,7 +10,7 @@ set -euo pipefail
 
 PRODUCT="NeuraMind"
 BUNDLE_ID="com.neuramind.app"
-SIGN_ID="Apple Development: saaivignesh20@gmail.com (F7Q59S24D2)"
+SIGN_ID="ContextD Dev"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/.build"
 

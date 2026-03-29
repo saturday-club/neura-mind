@@ -21,10 +21,11 @@ final class ServiceContainer {
     let panelController: EnrichmentPanelController?
     let debugController: DebugWindowController?
 
-    // Focus overlay
+    // Focus overlay (layer-0 window ordering)
     let focusScoreEngine: FocusScoreEngine?
-    let borderOverlayController: BorderOverlayWindowController?
     let contextRecoveryEngine: ContextRecoveryEngine?
+    let overlayPoller: FocusOverlayPoller?
+    let overlayManager: FocusOverlayManager?
 
     // Phase 3 — Daily Assistant
     let morningPlanEngine: MorningPlanEngine?
@@ -71,7 +72,11 @@ final class ServiceContainer {
 
             let scoreEngine = FocusScoreEngine(storageManager: storage, sessionDetector: detector)
             focusScoreEngine = scoreEngine
-            borderOverlayController = BorderOverlayWindowController(scoreEngine: scoreEngine)
+            // Layer-0 focus overlay (blur, tint, grain behind active window)
+            let oState = OverlayState.shared
+            let oPoller = FocusOverlayPoller(overlayState: oState)
+            overlayPoller = oPoller
+            overlayManager = FocusOverlayManager(overlayState: oState, poller: oPoller)
             contextRecoveryEngine = ContextRecoveryEngine(
                 storageManager: storage,
                 sessionDetector: detector,
@@ -120,8 +125,10 @@ final class ServiceContainer {
             panelController = nil
             debugController = nil
             focusScoreEngine = nil
-            borderOverlayController = nil
+            // borderOverlayController removed
             contextRecoveryEngine = nil
+            overlayPoller = nil
+            overlayManager = nil
             morningPlanEngine = nil
             windDownEngine = nil
             conversationEngine = nil
@@ -155,7 +162,11 @@ final class ServiceContainer {
 
         captureEngine?.start()
         focusScoreEngine?.start()
-        borderOverlayController?.start()
+        // borderOverlayController removed -- layer-0 overlay replaces it
+
+        // Start layer-0 focus overlay
+        overlayPoller?.start()
+        overlayManager?.createOverlays()
 
         // Apply user settings to enrichment strategy
         if let enrichment = enrichmentEngine,

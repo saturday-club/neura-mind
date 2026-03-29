@@ -2,15 +2,15 @@ import Foundation
 import Combine
 
 /// Polls every 10 seconds, reads recent capture data from SQLite,
-/// and produces a normalized focusScore (0.0–1.0) + FocusOverlayState.
+/// and produces a normalized focusScore (0.0-1.0) + FocusOverlayState.
 /// No LLM calls. No network. Works offline.
 ///
-/// Uses the captures table (written every 10s) NOT app_sessions (only written
-/// when a session ends), so the score reflects real-time activity.
+/// Score is primarily driven by app switching frequency.
+/// Staying in one app = high score (calm). Rapid switching = low score (red).
 @MainActor
 final class FocusScoreEngine: ObservableObject {
     @Published private(set) var currentScore: FocusScore?
-    @Published private(set) var overlayState: FocusOverlayState = .transitioning
+    @Published private(set) var overlayState: FocusOverlayState = .focus
 
     private let storageManager: StorageManager
     private let sessionDetector: AppSessionDetector
@@ -47,14 +47,25 @@ final class FocusScoreEngine: ObservableObject {
             let sessionInfo = await self.sessionDetector.currentSessionInfo()
 
             let now = Date()
-            let windowStart = now.addingTimeInterval(-60)  // TEST: 1 min window
+            // 3-minute sliding window for smoother scoring
+            let windowStart = now.addingTimeInterval(-180)
 
-            // Use captures (written every 10s) — not app_sessions (only written on session end).
-            // This gives an accurate picture of what happened in the last 3 minutes.
             guard let captures = try? self.storageManager.captures(from: windowStart, to: now) else { return }
 
-            // Count app switches: each time appName changes in the sorted capture list
-            let sortedApps = captures
+            // Filter out NeuraMind's own captures (our panels shouldn't count as switching)
+            let externalCaptures = captures.filter { capture in
+                capture.appName != "NeuraMind" && capture.appName != "HocusPocus"
+            }
+
+            guard !externalCaptures.isEmpty else {
+                // No external activity, assume focused
+                self.updateScore(value: 0.9, switchCount: 0, uniqueApps: 0,
+                               sessionMinutes: 0, now: now)
+                return
+            }
+
+            // Count app switches
+            let sortedApps = externalCaptures
                 .sorted { $0.timestamp < $1.timestamp }
                 .map(\.appName)
             var switchCount = 0
@@ -69,49 +80,59 @@ final class FocusScoreEngine: ObservableObject {
             if let info = sessionInfo {
                 currentSessionMinutes = (now.timeIntervalSince1970 - info.startTimestamp) / 60.0
             } else {
-                currentSessionMinutes = 0
+                // If session detector fails, estimate from captures
+                let span = externalCaptures.last!.timestamp - externalCaptures.first!.timestamp
+                currentSessionMinutes = max(span / 60.0, 0.5)
             }
 
-            // Formula: 50% switch penalty + 50% depth (TEST: 3 switches = max penalty, 3 min = full depth)
-            let switchPenalty = min(Double(switchCount) / 3.0, 1.0)
-            let depthScore    = min(currentSessionMinutes / 3.0, 1.0)
+            // Score formula: primarily switch-based
+            // 0 switches in 3 min = 1.0 (perfect focus)
+            // 5+ switches in 3 min = 0.0 (heavy drift)
+            // Depth gives a small bonus for sustained sessions
+            let switchPenalty = min(Double(switchCount) / 5.0, 1.0)
+            let depthBonus = min(currentSessionMinutes / 5.0, 1.0) * 0.15  // max 15% bonus
 
-            let value = (0.5 * (1.0 - switchPenalty))
-                      + (0.5 * depthScore)
+            let value = min((1.0 - switchPenalty) + depthBonus, 1.0)
 
-            // Drift escalation timer
-            if value < 0.4 {
-                if self.scoreDippedAt == nil { self.scoreDippedAt = now }
-            } else {
-                self.scoreDippedAt = nil
-            }
-
-            let state: FocusOverlayState
-            if currentSessionMinutes >= 90 {
-                state = .hyperfocus
-            } else if value >= 0.7 {
-                state = .focus
-            } else if value >= 0.4 {
-                state = .transitioning
-            } else if let dippedAt = self.scoreDippedAt, now.timeIntervalSince(dippedAt) >= 30 {  // TEST: 30s
-                state = .activeDrift
-            } else {
-                state = .drift
-            }
-
-            self.logger.info("score=\(String(format: "%.2f", value)) state=\(state) switches=\(switchCount) uniqueApps=\(uniqueApps) depth=\(String(format: "%.1f", currentSessionMinutes))min captures=\(captures.count)")
-
-            let score = FocusScore(
-                value: value,
-                switchCount: switchCount,
-                uniqueApps: uniqueApps,
-                currentSessionMinutes: currentSessionMinutes,
-                state: state,
-                computedAt: now
-            )
-
-            self.currentScore = score
-            self.overlayState = state
+            self.updateScore(value: value, switchCount: switchCount, uniqueApps: uniqueApps,
+                           sessionMinutes: currentSessionMinutes, now: now)
         }
+    }
+
+    private func updateScore(value: Double, switchCount: Int, uniqueApps: Int,
+                            sessionMinutes: Double, now: Date) {
+        // Drift escalation timer
+        if value < 0.3 {
+            if scoreDippedAt == nil { scoreDippedAt = now }
+        } else {
+            scoreDippedAt = nil
+        }
+
+        let state: FocusOverlayState
+        if sessionMinutes >= 90 {
+            state = .hyperfocus
+        } else if value >= 0.7 {
+            state = .focus
+        } else if value >= 0.4 {
+            state = .transitioning
+        } else if let dippedAt = scoreDippedAt, now.timeIntervalSince(dippedAt) >= 60 {
+            state = .activeDrift
+        } else {
+            state = .drift
+        }
+
+        logger.info("score=\(String(format: "%.2f", value)) state=\(state) switches=\(switchCount) apps=\(uniqueApps) depth=\(String(format: "%.1f", sessionMinutes))min")
+
+        let score = FocusScore(
+            value: value,
+            switchCount: switchCount,
+            uniqueApps: uniqueApps,
+            currentSessionMinutes: sessionMinutes,
+            state: state,
+            computedAt: now
+        )
+
+        currentScore = score
+        overlayState = state
     }
 }

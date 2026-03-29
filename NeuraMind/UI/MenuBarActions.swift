@@ -3,10 +3,9 @@ import SwiftUI
 
 // MARK: - Actions
 
-/// Clean action buttons for pause, enrichment, debug, and activity graph.
+/// Clean action buttons for pause, daily assistant, and debug.
 struct ActionsView: View {
     @ObservedObject var captureEngine: CaptureEngine
-    var onOpenEnrichment: () -> Void
     var onOpenDailyAssistant: () -> Void
     var onOpenDebug: () -> Void
 
@@ -26,22 +25,12 @@ struct ActionsView: View {
             }
 
             MenuActionButton(
-                title: "Plan & Summary",
-                icon: "brain.head.profile",
+                title: "Talk to Me",
+                icon: "bubble.left.and.bubble.right.fill",
                 shortcut: "N",
                 modifiers: "Shift+Cmd"
             ) {
                 onOpenDailyAssistant()
-                NSApp.activate(ignoringOtherApps: true)
-            }
-
-            MenuActionButton(
-                title: "Enrich Prompt",
-                icon: "sparkles",
-                shortcut: "Space",
-                modifiers: "Shift+Cmd"
-            ) {
-                onOpenEnrichment()
                 NSApp.activate(ignoringOtherApps: true)
             }
 
@@ -60,7 +49,6 @@ struct ActionsView: View {
 
 // MARK: - Menu Action Button
 
-/// A single action row styled like a native macOS menu item with hover highlight.
 struct MenuActionButton: View {
     let title: String
     let icon: String
@@ -106,7 +94,6 @@ struct MenuActionButton: View {
 
 // MARK: - Quit Button
 
-/// Quit action at the bottom of the panel.
 struct QuitButton: View {
     @State private var isHovered = false
 
