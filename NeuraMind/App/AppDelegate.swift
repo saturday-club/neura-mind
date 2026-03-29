@@ -235,6 +235,7 @@ private struct GlassPanelView: View {
     @State private var focusState: NeuraMindFocusState?
     @State private var focusDrift: FocusDriftMetrics?
     @State private var overlayScore: FocusScore?
+    @State private var isMedicated: Bool = false
 
     var body: some View {
         if #available(macOS 26, *) {
@@ -307,6 +308,30 @@ private struct GlassPanelView: View {
                 }
             }
 
+            // Medication toggle
+            GlassCard {
+                HStack(spacing: 8) {
+                    Image(systemName: "pill.fill")
+                        .foregroundStyle(isMedicated ? .blue : Color(nsColor: .tertiaryLabelColor))
+                        .font(.system(size: 12))
+                    Text("Medication")
+                        .font(.caption)
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { isMedicated },
+                        set: { newValue in
+                            isMedicated = newValue
+                            ServiceContainer.shared.medicationManager?.toggle()
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .tint(.blue)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
+
             // Summarization + Interval
             GlassCard {
                 VStack(spacing: 8) {
@@ -365,6 +390,7 @@ private struct GlassPanelView: View {
     }
 
     private func snapshotState() {
+        isMedicated = ServiceContainer.shared.medicationManager?.isActive ?? false
         lastError = captureEngine.lastError
 
         let focusSnapshot = FocusStateStore.currentSnapshot(storageManager: storageManager)
