@@ -240,7 +240,13 @@ actor SummarizationEngine {
             ]
         )
 
-        let systemPrompt = PromptTemplates.template(for: .summarizationSystem)
+        var systemPrompt = PromptTemplates.template(for: .summarizationSystem)
+
+        // Inject active task context so summaries are task-aware
+        if let taskName = await TimeTrackerEngine.shared.currentTaskName {
+            systemPrompt += "\n\nThe user is currently working on: \"\(taskName)\". "
+                + "When relevant, relate the observed activity to this task."
+        }
 
         let llmResponse = try await llmClient.completeWithUsage(
             messages: [LLMMessage(role: "user", content: userPrompt)],
@@ -277,7 +283,8 @@ actor SummarizationEngine {
 
         let record = try buildSummaryRecord(
             chunk: chunk, summary: parsed.summary, keyTopics: parsed.keyTopics,
-            documentPaths: allDocPaths, browserURLs: allURLs, activityType: parsed.activityType
+            documentPaths: allDocPaths, browserURLs: allURLs, activityType: parsed.activityType,
+            medicationActive: MedicationManager.currentState
         )
         let inserted = try storageManager.insertSummary(record)
         try storageManager.markCapturesAsSummarized(ids: chunk.captureIds)
@@ -295,7 +302,8 @@ actor SummarizationEngine {
         keyTopics: [String],
         documentPaths: [String],
         browserURLs: [String],
-        activityType: String?
+        activityType: String?,
+        medicationActive: Bool
     ) throws -> SummaryRecord {
         let encoder = JSONEncoder()
         let appNamesJSON = try String(data: encoder.encode(chunk.appNames), encoding: .utf8) ?? "[]"
@@ -316,7 +324,8 @@ actor SummarizationEngine {
             captureIds: captureIdsJSON,
             documentPaths: docPathsJSON,
             browserURLs: urlsJSON,
-            activityType: activityType
+            activityType: activityType,
+            medicationActive: medicationActive
         )
     }
 

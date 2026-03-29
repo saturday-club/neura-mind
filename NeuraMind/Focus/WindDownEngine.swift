@@ -49,19 +49,28 @@ final class WindDownEngine: ObservableObject {
         Format your response with:
         **Accomplished** (2-3 bullets of what actually got done)
         **Focus patterns** (what pulled attention, how focused overall)
-        **Tomorrow** (one sentence — a single intention to carry forward)
+        **Tomorrow** (one sentence, a single intention to carry forward)
         Keep it under 200 words. Be encouraging, not critical.
+
+        \(PromptTemplates.antiSlop)
         """
 
         do {
-            let result = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: userMessage)],
                 model: model,
                 maxTokens: 400,
                 systemPrompt: systemPrompt,
                 temperature: 0.3
             )
-            currentRecap = result
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "wind-down", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            currentRecap = response.text
         } catch {
             self.error = error.localizedDescription
         }

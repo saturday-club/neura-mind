@@ -27,6 +27,9 @@ final class ServiceContainer {
     let overlayPoller: FocusOverlayPoller?
     let overlayManager: FocusOverlayManager?
 
+    // Phase 3.5 — Medication tracking
+    let medicationManager: MedicationManager?
+
     // Phase 3 — Daily Assistant
     let morningPlanEngine: MorningPlanEngine?
     let windDownEngine: WindDownEngine?
@@ -69,6 +72,8 @@ final class ServiceContainer {
             engine.setSessionDetector(detector)
             captureEngine = engine
             sessionDetector = detector
+
+            medicationManager = MedicationManager(database: db)
 
             let scoreEngine = FocusScoreEngine(storageManager: storage, sessionDetector: detector)
             focusScoreEngine = scoreEngine
@@ -124,6 +129,7 @@ final class ServiceContainer {
             activityInferenceEngine = nil
             panelController = nil
             debugController = nil
+            medicationManager = nil
             focusScoreEngine = nil
             // borderOverlayController removed
             contextRecoveryEngine = nil

@@ -38,6 +38,10 @@ struct SummaryRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
     /// LLM-classified activity type (coding, research, communication, admin, etc.)
     var activityType: String?
 
+    /// Whether the user was on medication when this summary was written.
+    /// Stamped at write time from MedicationManager.currentState.
+    var medicationActive: Bool = false
+
     // MARK: - Table mapping
 
     static let databaseTableName = "summaries"
@@ -46,6 +50,7 @@ struct SummaryRecord: Codable, FetchableRecord, PersistableRecord, Sendable {
         case id, startTimestamp, endTimestamp, appNames
         case summary, keyTopics, captureIds, embedding
         case documentPaths, browserURLs, activityType
+        case medicationActive
     }
 
     // MARK: - Record lifecycle

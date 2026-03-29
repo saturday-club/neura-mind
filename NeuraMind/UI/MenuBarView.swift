@@ -17,6 +17,7 @@ struct MenuBarView: View {
     @State private var summaryCount24h: Int = 0
     @State private var estimatedCostToday: Double = 0
     @State private var recentCaptures: [CaptureRecord] = []
+    @State private var isMedicated: Bool = false
     @State private var lastError: String?
     @State private var lastSummaryDate: Date?
     @State private var pendingCaptures: Int = 0
@@ -33,6 +34,28 @@ struct MenuBarView: View {
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 10)
+
+            // Medication toggle
+            HStack(spacing: 8) {
+                Image(systemName: "pill.fill")
+                    .foregroundStyle(isMedicated ? .blue : Color(nsColor: .tertiaryLabelColor))
+                    .font(.system(size: 12))
+                Text("Medication")
+                    .font(.caption)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { isMedicated },
+                    set: { newValue in
+                        isMedicated = newValue
+                        ServiceContainer.shared.medicationManager?.toggle()
+                    }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .tint(.blue)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
 
             if let score = overlayScore {
                 HStack(spacing: 6) {
@@ -138,6 +161,7 @@ struct MenuBarView: View {
 
     /// Capture a fresh snapshot of stats each time the menu opens.
     private func snapshotState() {
+        isMedicated = ServiceContainer.shared.medicationManager?.isActive ?? false
         lastError = captureEngine.lastError
 
         let focusSnapshot = FocusStateStore.currentSnapshot(storageManager: storageManager)
@@ -157,11 +181,10 @@ struct MenuBarView: View {
             pendingCaptures = health.pendingCount
         }
 
-        // Estimate cost from token usage (Haiku pricing approximation)
+        // Estimate cost from token usage (Haiku 4.5 pricing)
         if let usage = try? storage.totalTokenUsage24h() {
-            // Approximate pricing: $0.25/Mtok input, $1.25/Mtok output (Haiku 4.5)
-            let inputCost = usage.inputMtok * 0.25
-            let outputCost = usage.outputMtok * 1.25
+            let inputCost = usage.inputMtok * 0.80
+            let outputCost = usage.outputMtok * 5.00
             estimatedCostToday = inputCost + outputCost
         }
     }

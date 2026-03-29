@@ -49,14 +49,21 @@ final class ConversationEngine: ObservableObject {
         let llmMessages = messages.map { LLMMessage(role: $0.role, content: $0.content) }
 
         do {
-            let response = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: llmMessages,
                 model: model,
                 maxTokens: 600,
                 systemPrompt: systemPrompt,
                 temperature: 0.7
             )
-            messages.append(ConversationMessage(role: "assistant", content: response))
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "conversation", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            messages.append(ConversationMessage(role: "assistant", content: response.text))
         } catch {
             // Remove the user message that failed to get a response
             messages.removeLast()
@@ -80,7 +87,8 @@ final class ConversationEngine: ObservableObject {
         var parts: [String] = [
             "You are an ADHD-aware productivity assistant for NeuraMind.",
             "You have access to the user's screen activity captured today.",
-            "Be conversational, specific, and concise — ADHD brains don't need essays."
+            "Be conversational, specific, and concise. ADHD brains don't need essays.",
+            PromptTemplates.antiSlop
         ]
 
         if !summaries.isEmpty {

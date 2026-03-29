@@ -117,8 +117,20 @@ final class ClaudeShellClient: LLMClient, @unchecked Sendable {
             throw LLMError.invalidResponse
         }
 
-        // claude -p doesn't return token counts directly; leave usage nil
-        return LLMResponse(text: text, usage: nil)
+        // Extract token usage from the JSON response
+        var usage: LLMTokenUsage?
+        if let usageDict = json["usage"] as? [String: Any],
+           let inputTokens = usageDict["input_tokens"] as? Int,
+           let outputTokens = usageDict["output_tokens"] as? Int {
+            let cacheCreation = usageDict["cache_creation_input_tokens"] as? Int ?? 0
+            let cacheRead = usageDict["cache_read_input_tokens"] as? Int ?? 0
+            usage = LLMTokenUsage(
+                inputTokens: inputTokens + cacheCreation + cacheRead,
+                outputTokens: outputTokens
+            )
+        }
+
+        return LLMResponse(text: text, usage: usage)
     }
 
     // MARK: - Subprocess execution

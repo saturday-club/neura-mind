@@ -235,6 +235,7 @@ private struct GlassPanelView: View {
     @State private var focusState: NeuraMindFocusState?
     @State private var focusDrift: FocusDriftMetrics?
     @State private var overlayScore: FocusScore?
+    @State private var isMedicated: Bool = false
 
     var body: some View {
         if #available(macOS 26, *) {
@@ -307,6 +308,30 @@ private struct GlassPanelView: View {
                 }
             }
 
+            // Medication toggle
+            GlassCard {
+                HStack(spacing: 8) {
+                    Image(systemName: "pill.fill")
+                        .foregroundStyle(isMedicated ? .blue : Color(nsColor: .tertiaryLabelColor))
+                        .font(.system(size: 12))
+                    Text("Medication")
+                        .font(.caption)
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { isMedicated },
+                        set: { newValue in
+                            isMedicated = newValue
+                            ServiceContainer.shared.medicationManager?.toggle()
+                        }
+                    ))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .tint(.blue)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
+
             // Summarization + Interval
             GlassCard {
                 VStack(spacing: 8) {
@@ -341,6 +366,11 @@ private struct GlassPanelView: View {
                 }
             }
 
+            // Smart Todo - current task from morning plan
+            GlassCard {
+                SmartTodoWidget()
+            }
+
             // Focus Overlay Controls
             OverlayControlsCard()
 
@@ -365,6 +395,7 @@ private struct GlassPanelView: View {
     }
 
     private func snapshotState() {
+        isMedicated = ServiceContainer.shared.medicationManager?.isActive ?? false
         lastError = captureEngine.lastError
 
         let focusSnapshot = FocusStateStore.currentSnapshot(storageManager: storageManager)
@@ -384,8 +415,9 @@ private struct GlassPanelView: View {
         }
 
         if let usage = try? storage.totalTokenUsage24h() {
-            let inputCost = usage.inputMtok * 0.25
-            let outputCost = usage.outputMtok * 1.25
+            // Haiku 4.5 pricing: $0.80/Mtok input, $4.00/Mtok output
+            let inputCost = usage.inputMtok * 0.80
+            let outputCost = usage.outputMtok * 5.00
             estimatedCostToday = inputCost + outputCost
         }
     }
@@ -395,7 +427,7 @@ private struct GlassPanelView: View {
 
 /// Focus overlay controls: toggle, blur, tint, grain sliders.
 private struct OverlayControlsCard: View {
-    @State private var overlayState = OverlayState.shared
+    @Bindable private var overlayState = OverlayState.shared
 
     var body: some View {
         GlassCard {

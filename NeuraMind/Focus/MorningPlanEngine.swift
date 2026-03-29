@@ -69,22 +69,35 @@ final class MorningPlanEngine: ObservableObject {
         let systemPrompt = """
         You are an ADHD-aware productivity coach. Turn the user's goals into a clear, actionable day plan.
         Format your response with:
-        **Priorities** (max 5, most important first — one line each)
+        **Priorities** (max 5, most important first, one line each)
         **First step** (one concrete thing to do right now)
         **Watch out for** (one potential distraction or blocker, optional)
         Keep it under 200 words. Be specific and encouraging.
+
+        \(PromptTemplates.antiSlop)
         """
 
         do {
-            let result = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: userMessage)],
                 model: model,
                 maxTokens: 400,
                 systemPrompt: systemPrompt,
                 temperature: 0.3
             )
-            currentPlan = result
-            UserDefaults.standard.set(result, forKey: planKey)
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "morning-plan", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            currentPlan = response.text
+            UserDefaults.standard.set(response.text, forKey: planKey)
+
+            // Auto-load parsed priorities into the time tracker
+            let priorities = Self.parsePriorities(from: response.text)
+            TimeTrackerEngine.shared.loadFromPlan(priorities: priorities)
         } catch {
             self.error = error.localizedDescription
         }
@@ -100,5 +113,45 @@ final class MorningPlanEngine: ObservableObject {
 
     static func savedPlan() -> String? {
         UserDefaults.standard.string(forKey: "morningPlan_\(todayString())")
+    }
+
+    /// Extract priority lines from the generated plan text.
+    /// Looks for lines after "**Priorities**" or numbered/bulleted items.
+    static func parsePriorities(from plan: String?) -> [String] {
+        guard let plan else { return [] }
+        let cleaned = stripMarkdown(plan)
+        let lines = cleaned.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var priorities: [String] = []
+        var inPriorities = false
+
+        for line in lines {
+            let lower = line.lowercased()
+            // Detect the priorities section header
+            if lower.contains("priorities") || lower.contains("priority") {
+                inPriorities = true
+                // If header line also has content after colon, skip it
+                continue
+            }
+            // Stop at next section
+            if lower.contains("first step") || lower.contains("watch out") {
+                inPriorities = false
+                continue
+            }
+            if inPriorities {
+                // Strip leading bullets/numbers: "1. ", "- ", "* ", "1) "
+                var cleaned = line
+                cleaned = cleaned.replacingOccurrences(
+                    of: "^(\\d+[.)\\s]+|[-*]\\s+)", with: "", options: .regularExpression
+                )
+                let trimmed = cleaned.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    priorities.append(trimmed)
+                }
+            }
+        }
+        return priorities
     }
 }

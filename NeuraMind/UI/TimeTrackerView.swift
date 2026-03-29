@@ -16,6 +16,7 @@ struct TrackedTask: Identifiable, Codable, Sendable {
     var name: String
     var sessions: [TaskSession]
     let createdAt: Date
+    var isCompleted: Bool = false
 
     var totalDuration: TimeInterval {
         sessions.reduce(0) { $0 + $1.duration }
@@ -52,10 +53,17 @@ final class TimeTrackerEngine: ObservableObject {
 
     private init() {
         load()
-        if let running = tasks.first(where: { $0.isRunning }) {
-            activeTaskID = running.id
-            startTick()
+        // Close any orphaned sessions from a previous app launch
+        var didFix = false
+        for i in tasks.indices {
+            if let lastIdx = tasks[i].sessions.indices.last,
+               tasks[i].sessions[lastIdx].endedAt == nil {
+                tasks[i].sessions[lastIdx].endedAt = Date()
+                didFix = true
+            }
         }
+        if didFix { save() }
+        activeTaskID = nil
     }
 
     func addTask(name: String) {
@@ -101,6 +109,70 @@ final class TimeTrackerEngine: ObservableObject {
         if activeTaskID == id { stopTask(id: id) }
         tasks.removeAll { $0.id == id }
         save()
+    }
+
+    /// The currently active task (if any).
+    var currentTask: TrackedTask? {
+        guard let id = activeTaskID else { return nil }
+        return tasks.first { $0.id == id }
+    }
+
+    /// Name of the active task, for injection into summarization prompts.
+    var currentTaskName: String? {
+        currentTask?.name
+    }
+
+    /// Mark a task as completed and stop it if running.
+    func completeTask(id: UUID) {
+        if let idx = tasks.firstIndex(where: { $0.id == id }) {
+            if tasks[idx].isRunning { stopTask(id: id) }
+            tasks[idx].isCompleted = true
+            save()
+        }
+    }
+
+    /// Switch to the next incomplete task. Returns true if one was found.
+    @discardableResult
+    func nextTask() -> Bool {
+        if let activeID = activeTaskID { stopTask(id: activeID) }
+        if let next = tasks.first(where: { !$0.isCompleted && !$0.isRunning }) {
+            startTask(id: next.id)
+            return true
+        }
+        return false
+    }
+
+    /// Load tasks from a parsed morning plan. Replaces any existing
+    /// plan-loaded tasks with the new set when the plan is regenerated.
+    func loadFromPlan(priorities: [String]) {
+        guard !priorities.isEmpty else { return }
+
+        // Stop any running task first
+        if let activeID = activeTaskID { stopTask(id: activeID) }
+
+        // Remove old plan tasks (today's tasks that have no sessions logged)
+        // and completed tasks, keeping manually-added tasks with time
+        let startOfDay = Calendar.current.startOfDay(for: Date())
+        tasks.removeAll { $0.createdAt >= startOfDay }
+
+        // Add new priorities
+        for name in priorities {
+            let task = TrackedTask(
+                id: UUID(), name: name, sessions: [], createdAt: Date()
+            )
+            tasks.append(task)
+        }
+        save()
+    }
+
+    /// Count of completed tasks today.
+    var completedCount: Int {
+        tasks.filter { $0.isCompleted }.count
+    }
+
+    /// Count of total tasks today.
+    var totalTaskCount: Int {
+        tasks.count
     }
 
     var todayTotal: TimeInterval {
