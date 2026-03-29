@@ -23,13 +23,20 @@ struct NeuraMindApp: App {
     init() {
         // Skip Keychain migration - using claude -p proxy, no API key needed
 
-        // Register the global hotkey
+        // Register the global hotkeys
         HotkeyManager.shared.onHotkey = {
             Task { @MainActor in
                 ServiceContainer.shared.panelController?.toggle()
             }
         }
+        // Cmd+Shift+N → NeuraMind Daily Assistant panel
+        HotkeyManager.shared.onSecondaryHotkey = {
+            Task { @MainActor in
+                ServiceContainer.shared.neuraMindController?.showMorning()
+            }
+        }
         HotkeyManager.shared.register()
+        HotkeyManager.shared.registerSecondary()
     }
 }
 
@@ -102,6 +109,12 @@ private struct MenuBarContent: View {
                     storageManager: services.storageManager,
                     onOpenEnrichment: {
                         services.panelController?.toggle()
+                    },
+                    onOpenGoodMorning: {
+                        services.neuraMindController?.showMorning()
+                    },
+                    onOpenWindDown: {
+                        services.neuraMindController?.showWindDown()
                     },
                     onOpenDebug: {
                         services.debugController?.toggle()

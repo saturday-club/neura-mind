@@ -7,6 +7,8 @@ import SwiftUI
 struct ActionsView: View {
     @ObservedObject var captureEngine: CaptureEngine
     var onOpenEnrichment: () -> Void
+    var onOpenGoodMorning: () -> Void
+    var onOpenWindDown: () -> Void
     var onOpenDebug: () -> Void
 
     var body: some View {
@@ -22,6 +24,26 @@ struct ActionsView: View {
                 } else {
                     captureEngine.start()
                 }
+            }
+
+            MenuActionButton(
+                title: "Good Morning",
+                icon: "sun.max.fill",
+                shortcut: nil,
+                modifiers: nil
+            ) {
+                onOpenGoodMorning()
+                NSApp.activate(ignoringOtherApps: true)
+            }
+
+            MenuActionButton(
+                title: "Wind Down",
+                icon: "moon.fill",
+                shortcut: nil,
+                modifiers: nil
+            ) {
+                onOpenWindDown()
+                NSApp.activate(ignoringOtherApps: true)
             }
 
             MenuActionButton(
@@ -43,7 +65,6 @@ struct ActionsView: View {
                 onOpenDebug()
                 NSApp.activate(ignoringOtherApps: true)
             }
-
         }
     }
 }

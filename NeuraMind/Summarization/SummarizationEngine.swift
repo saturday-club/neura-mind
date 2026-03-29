@@ -37,12 +37,10 @@ actor SummarizationEngine {
     var pollInterval: TimeInterval = 60
 
     /// Minimum age of captures before summarizing (seconds).
-    /// 5 min balances freshness with having enough context per chunk.
-    var minimumAge: TimeInterval = 300 // 5 minutes
+    var minimumAge: TimeInterval = 60 // 1 minute
 
     /// Duration of each summarization time window (seconds).
-    /// 5 min chunks for faster feedback. Cost ~$0.002/call, ~12 calls/hour.
-    var chunkDuration: TimeInterval = 300 // 5 minutes
+    var chunkDuration: TimeInterval = 60 // 1 minute
 
     /// Minimum sub-chunk duration when splitting at app boundaries (seconds).
     /// 60s prevents micro-summaries from rapid app switching.

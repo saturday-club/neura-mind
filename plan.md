@@ -578,3 +578,185 @@ func lastProductiveSummary(for appName: String, before date: Date) throws -> Sum
 - User editing or saving the recovery message
 - History of past recovery messages
 - Per-app opt-out (e.g. "never show recovery for Spotify")
+
+---
+---
+
+# Phase 3 — Conversational Day Interface (Good Morning / Wind Down)
+
+## Problem
+
+AutoLog captures everything you do. Phase 1 shows you your focus state. Phase 2 reminds you where you left off. But there's no moment where you actually *set an intention* for the day — or *reflect* on what happened. ADHD brains especially need that bookend structure: a clear start signal with explicit goals, and a soft close that processes the day before the next one bleeds in.
+
+The existing enrichment panel (Cmd+Shift+Space) lets you query your history, but it's reactive — you ask, it answers. Phase 3 adds a proactive, conversational layer: a dedicated UI for two daily rituals, both grounded in AutoLog's screen capture history and optionally enriched with calendar/email context.
+
+---
+
+## What we're building
+
+The NeuraMind panel has **two top-level tabs**:
+
+---
+
+### Tab 1 — Daily Assistant (Good Morning / Wind Down / Chat)
+
+Three sub-tabs within this tab:
+
+**1. Good Morning** — User types their goals for the day. Optionally pulls today's calendar events from Google Calendar or Outlook (OAuth2). Claude (Sonnet) reads goals + calendar + any existing AutoLog summaries from today and produces a structured day plan: prioritized tasks, watch-outs, and a single first step.
+
+**2. Wind Down** — End-of-day recap. Claude reads all AutoLog summaries from today, compares against morning goals (if set), and returns: what got done, focus patterns, and one suggestion for tomorrow.
+
+**3. Chat** — Persistent back-and-forth conversation with Claude. Full today's summaries injected as system context. Up to 10 turns per session (in-memory only, not persisted).
+
+---
+
+### Tab 2 — Work Patterns (Summaries Browser)
+
+A browsable, filterable view of all AutoLog summaries directly from the DB — no LLM call needed, instant. Lets the user understand their actual work patterns over time.
+
+**Filters:**
+- **Time range:** Today / Yesterday / Last 7 days / Custom date picker
+- **Time of day:** Morning (6–12), Afternoon (12–18), Evening (18–24)
+- **App filter:** Dropdown of all apps seen in summaries
+
+**Summary list:** Each entry shows:
+- Time range (e.g. 9:14–9:19)
+- App(s) involved
+- Summary text
+- Activity type badge (coding, research, communication, etc.)
+
+**No LLM involved** — pure DB read + SwiftUI list. Fast, works offline, works even before summarization catches up.
+
+---
+
+## Good Morning Flow
+
+```
+User opens app (first time today) OR clicks "Good Morning" in menu bar
+  ↓
+NeuraMindPanel opens in "morning" mode
+  ↓
+[Optional] Fetch Gmail / Outlook context → summarize via Haiku
+  ↓
+Panel shows:
+  - "What do you want to accomplish today?" (text input)
+  - [Optional] pulled email/calendar summary shown as context
+  ↓
+User types goals → submits
+  ↓
+Claude (Sonnet) generates:
+  - Prioritized task list
+  - Suggested focus block schedule
+  - Flags from email/calendar (meetings, deadlines)
+  ↓
+Plan displayed in panel, copyable to clipboard
+Plan stored to UserDefaults for Wind Down comparison
+```
+
+---
+
+## Wind Down Flow
+
+```
+User clicks "Wind Down" in menu bar (or scheduled prompt at e.g. 6pm)
+  ↓
+NeuraMindPanel opens in "wind down" mode
+  ↓
+Load today's morning plan from UserDefaults (if exists)
+  ↓
+Query AutoLog DB: all summaries from today (midnight to now)
+  ↓
+Claude (Sonnet) generates:
+  - What you actually worked on (from summaries)
+  - How it maps to stated morning goals
+  - Top focus drains (apps/sites that pulled attention)
+  - One sentence for tomorrow
+  ↓
+Recap displayed in panel, copyable
+```
+
+---
+
+## Gmail / Outlook Integration
+
+Pull is triggered manually (user clicks "Pull email context" in the morning panel). Not automatic — user controls when their inbox is read.
+
+**Gmail:**
+- OAuth2 via Google Identity API
+- Scopes: `gmail.readonly`, `calendar.readonly`
+- Fetch: unread emails from last 24h + today's calendar events
+- Summarize via Haiku (max 300 tokens) before passing to planning call
+
+**Outlook:**
+- Microsoft Graph API (`/me/messages`, `/me/calendarView`)
+- OAuth2 via MSAL
+- Same summarization step as Gmail
+
+Tokens stored in Keychain (same pattern as existing OpenRouter key storage).
+
+---
+
+## Conversational UI
+
+Extends `EnrichmentPanel` with a chat mode:
+
+```
+NeuraMindChatPanel
+  ├── Message history (scrollable, user + assistant bubbles)
+  ├── Text input field (multiline, Cmd+Enter to send)
+  └── Context: full today's summaries injected as system context
+```
+
+**System prompt includes:**
+- Today's AutoLog summaries (last 8 hours)
+- Morning plan (if set)
+- Current focus state from FocusScoreEngine
+
+**Conversation history:** Kept in memory as `[(role, content)]` array for the session. Not persisted to DB. Cleared when panel closes.
+
+**Model:** Sonnet 4.6 (same as enrichment). Max 10 turns before suggesting a fresh start to keep context window bounded.
+
+---
+
+## New Files
+
+| File | What |
+|------|------|
+| `NeuraMind/UI/NeuraMindPanel.swift` | Main panel with Morning / Wind Down / Chat tabs |
+| `NeuraMind/Focus/MorningPlanEngine.swift` | Goal input → Sonnet call → structured plan |
+| `NeuraMind/Focus/WindDownEngine.swift` | DB query → Sonnet call → day recap |
+| `NeuraMind/Focus/EmailContextFetcher.swift` | Gmail + Outlook OAuth2 pull + Haiku summarization |
+| `NeuraMind/Focus/ConversationEngine.swift` | Chat session management, context injection, turn history |
+
+---
+
+## Modified Files
+
+| File | Change |
+|------|--------|
+| `NeuraMind/UI/MenuBarView.swift` | Add "Good Morning" and "Wind Down" buttons |
+| `NeuraMind/App/ServiceContainer.swift` | Create + wire NeuraMind engines |
+| `NeuraMind/App/AppDelegate.swift` | Register NeuraMindPanel hotkey (e.g. Cmd+Shift+N) |
+| `NeuraMind/UI/SettingsView.swift` | Add NeuraMind section: email provider picker, OAuth connect buttons |
+
+---
+
+## Implementation Order
+
+1. `NeuraMindPanel.swift` — shell UI with three tabs (Morning / Wind Down / Chat), no logic
+2. `MorningPlanEngine.swift` — goal input + Sonnet call, no email context yet
+3. `WindDownEngine.swift` — DB query + Sonnet call
+4. Wire both into `ServiceContainer`, add menu bar buttons
+5. `ConversationEngine.swift` — chat with context injection
+6. `EmailContextFetcher.swift` — Gmail OAuth (Outlook optional, stretch goal)
+7. Settings UI for email config
+
+---
+
+## Out of scope for Phase 3
+
+- Persistent conversation history across sessions
+- Push notifications / scheduled prompts (requires background daemon)
+- Multi-day planning or weekly reviews
+- Automatic email pull (always manual / user-initiated)
+- Outlook integration (stretch goal — Gmail first)
