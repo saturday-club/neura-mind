@@ -235,12 +235,27 @@ enum ReportEngine {
         let reportView = MedicalReportView(data: data, narrative: narrative)
         let hosting = NSHostingView(rootView: reportView)
         hosting.frame = NSRect(x: 0, y: 0, width: 700, height: 10)
+
+        // NSHostingView must be attached to a window to lay out and render correctly.
+        // Position it far off-screen so it's never visible.
+        let offscreenWindow = NSWindow(
+            contentRect: NSRect(x: -9999, y: -9999, width: 700, height: 10),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        offscreenWindow.contentView = hosting
+        offscreenWindow.orderFrontRegardless()
+
         hosting.layoutSubtreeIfNeeded()
         let height = max(hosting.fittingSize.height, 500)
         hosting.frame = NSRect(x: 0, y: 0, width: 700, height: height)
+        offscreenWindow.setContentSize(NSSize(width: 700, height: height))
         hosting.layoutSubtreeIfNeeded()
+        hosting.display()
 
         let pdfData = hosting.dataWithPDF(inside: hosting.bounds)
+        offscreenWindow.orderOut(nil)
 
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType.pdf]
