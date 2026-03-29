@@ -54,14 +54,21 @@ final class WindDownEngine: ObservableObject {
         """
 
         do {
-            let result = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: userMessage)],
                 model: model,
                 maxTokens: 400,
                 systemPrompt: systemPrompt,
                 temperature: 0.3
             )
-            currentRecap = result
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "wind-down", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            currentRecap = response.content
         } catch {
             self.error = error.localizedDescription
         }

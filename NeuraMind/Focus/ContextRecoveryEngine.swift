@@ -115,13 +115,20 @@ final class ContextRecoveryEngine {
         """
 
         do {
-            let text = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: prompt)],
                 model: model,
                 maxTokens: 60,
                 temperature: 0.0
             )
-            let cleaned = text
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "context-recovery", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            let cleaned = response.content
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\"", with: "")
             return cleaned.isEmpty ? nil : cleaned

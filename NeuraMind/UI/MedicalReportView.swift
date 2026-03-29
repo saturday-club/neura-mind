@@ -322,16 +322,30 @@ enum ReportEngine {
         - If there are no distraction periods, return an empty array
         """
 
+        let reportModel = "anthropic/claude-haiku-4-5"
         do {
-            let response = try await llm.complete(
+            let response = try await llm.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: userPrompt)],
-                model: "anthropic/claude-haiku-4-5",
+                model: reportModel,
                 maxTokens: 2000,
                 systemPrompt: systemPrompt,
                 temperature: 0.2
             )
-            return parseNarrative(response)
+            if let usage = response.usage,
+               let storage = ServiceContainer.shared.storageManager {
+                _ = try? storage.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "report-engine", model: reportModel,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            let parsed = parseNarrative(response.content)
+            if parsed == nil {
+                print("[ReportEngine] JSON parse failed. Raw LLM response:\n\(response.content)")
+            }
+            return parsed
         } catch {
+            print("[ReportEngine] LLM call failed: \(error)")
             return nil
         }
     }
@@ -472,6 +486,15 @@ struct MedicalReportView: View {
                     rule
                     medicationNoteSection(medNote)
                 }
+            } else {
+                rule
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionLabel("ANALYSIS")
+                    Text("Analysis could not be generated. Check the LLM connection and review logs for details.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color(white: 0.45))
+                }
+                .padding(.vertical, 14)
             }
             medicationSection
             footer

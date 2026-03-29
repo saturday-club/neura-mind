@@ -76,15 +76,22 @@ final class MorningPlanEngine: ObservableObject {
         """
 
         do {
-            let result = try await llmClient.complete(
+            let response = try await llmClient.completeWithUsage(
                 messages: [LLMMessage(role: "user", content: userMessage)],
                 model: model,
                 maxTokens: 400,
                 systemPrompt: systemPrompt,
                 temperature: 0.3
             )
-            currentPlan = result
-            UserDefaults.standard.set(result, forKey: planKey)
+            if let usage = response.usage {
+                _ = try? storageManager.insertTokenUsage(TokenUsageRecord(
+                    id: nil, timestamp: Date().timeIntervalSince1970,
+                    caller: "morning-plan", model: model,
+                    inputTokens: usage.inputTokens, outputTokens: usage.outputTokens
+                ))
+            }
+            currentPlan = response.content
+            UserDefaults.standard.set(response.content, forKey: planKey)
         } catch {
             self.error = error.localizedDescription
         }
