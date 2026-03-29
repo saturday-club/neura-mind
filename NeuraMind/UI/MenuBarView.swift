@@ -10,6 +10,7 @@ struct MenuBarView: View {
     var storageManager: StorageManager?
 
     var onOpenEnrichment: () -> Void
+    var onOpenDailyAssistant: () -> Void
     var onOpenDebug: () -> Void
 
     // Snapshotted values -- refreshed each time the menu opens.
@@ -110,6 +111,7 @@ struct MenuBarView: View {
             ActionsView(
                 captureEngine: captureEngine,
                 onOpenEnrichment: onOpenEnrichment,
+                onOpenDailyAssistant: onOpenDailyAssistant,
                 onOpenDebug: onOpenDebug
             )
             .padding(.horizontal, 12)

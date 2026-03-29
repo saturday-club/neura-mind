@@ -13,9 +13,9 @@ struct SettingsView: View {
         static let captureInterval: Double = 2.0
         static let maxKeyframeInterval: Double = 60
         static let keyframeChangeThreshold: Double = 0.50
-        static let chunkDuration: Double = 300
+        static let chunkDuration: Double = 60
         static let pollInterval: Double = 60
-        static let minAge: Double = 300
+        static let minAge: Double = 60
         static let apiServerEnabled = true
         static let apiServerPort = 21890
         static let retentionDays = 7
@@ -42,6 +42,7 @@ struct SettingsView: View {
 
     // NeuraMind Settings
     @AppStorage("contextRecoveryEnabled") private var contextRecoveryEnabled: Bool = false
+    @AppStorage("emailProvider") private var emailProvider: String = EmailProvider.none.rawValue
 
     // Capture Settings
     @AppStorage("captureInterval") private var captureInterval: Double = Defaults.captureInterval
@@ -180,6 +181,16 @@ struct SettingsView: View {
             Section("NeuraMind") {
                 Toggle("Context Recovery", isOn: $contextRecoveryEnabled)
                 Text("After drifting for 5+ minutes, shows a one-line card reminding you what you were working on when you return.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Picker("Email/calendar provider:", selection: $emailProvider) {
+                    ForEach(EmailProvider.allCases, id: \.rawValue) { provider in
+                        Text(provider.displayName).tag(provider.rawValue)
+                    }
+                }
+                .pickerStyle(.menu)
+                Text("Used in the Good Morning panel to pull email and calendar context. OAuth2 integration coming soon.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

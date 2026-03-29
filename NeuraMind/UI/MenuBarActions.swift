@@ -7,6 +7,7 @@ import SwiftUI
 struct ActionsView: View {
     @ObservedObject var captureEngine: CaptureEngine
     var onOpenEnrichment: () -> Void
+    var onOpenDailyAssistant: () -> Void
     var onOpenDebug: () -> Void
 
     var body: some View {
@@ -22,6 +23,16 @@ struct ActionsView: View {
                 } else {
                     captureEngine.start()
                 }
+            }
+
+            MenuActionButton(
+                title: "Plan & Summary",
+                icon: "brain.head.profile",
+                shortcut: "N",
+                modifiers: "Shift+Cmd"
+            ) {
+                onOpenDailyAssistant()
+                NSApp.activate(ignoringOtherApps: true)
             }
 
             MenuActionButton(
@@ -43,7 +54,6 @@ struct ActionsView: View {
                 onOpenDebug()
                 NSApp.activate(ignoringOtherApps: true)
             }
-
         }
     }
 }

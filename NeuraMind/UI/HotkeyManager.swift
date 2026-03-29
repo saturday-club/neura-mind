@@ -8,10 +8,14 @@ import AppKit
 final class HotkeyManager {
     private let logger = DualLogger(category: "Hotkey")
 
-    /// Callback invoked when the global hotkey is pressed.
+    /// Callback invoked when the primary global hotkey is pressed (Cmd+Shift+Space).
     var onHotkey: (() -> Void)?
 
+    /// Callback invoked when the secondary global hotkey is pressed (Cmd+Shift+N).
+    var onSecondaryHotkey: (() -> Void)?
+
     private var hotKeyRef: EventHotKeyRef?
+    private var secondHotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
 
     /// The hotkey signature identifier (ASCII for "CTXD").
@@ -24,6 +28,7 @@ final class HotkeyManager {
 
     deinit {
         unregister()
+        unregisterSecondary()
     }
 
     /// Register a global hotkey.
@@ -71,7 +76,23 @@ final class HotkeyManager {
         }
     }
 
-    /// Unregister the current global hotkey.
+    /// Register the secondary hotkey (default: Cmd+Shift+N, keyCode 45).
+    /// Must be called after `register()` so the event handler is already installed.
+    func registerSecondary(keyCode: UInt32 = 45, modifiers: UInt32 = UInt32(cmdKey | shiftKey)) {
+        unregisterSecondary()
+        let hotKeyID = EventHotKeyID(signature: signature, id: 2)
+        let status = RegisterEventHotKey(
+            keyCode, modifiers, hotKeyID,
+            GetApplicationEventTarget(), 0, &secondHotKeyRef
+        )
+        if status == noErr {
+            logger.info("Secondary hotkey registered (keyCode: \(keyCode), modifiers: \(modifiers))")
+        } else {
+            logger.error("Failed to register secondary hotkey: \(status)")
+        }
+    }
+
+    /// Unregister the current global hotkeys.
     func unregister() {
         if let ref = hotKeyRef {
             UnregisterEventHotKey(ref)
@@ -83,11 +104,19 @@ final class HotkeyManager {
         }
     }
 
-    /// Called by the Carbon event handler when the hotkey is pressed.
-    fileprivate func handleHotKeyEvent() {
-        logger.debug("Hotkey pressed")
+    func unregisterSecondary() {
+        if let ref = secondHotKeyRef {
+            UnregisterEventHotKey(ref)
+            secondHotKeyRef = nil
+        }
+    }
+
+    /// Called by the Carbon event handler when any registered hotkey is pressed.
+    fileprivate func handleHotKeyEvent(id: UInt32) {
+        logger.debug("Hotkey pressed (id: \(id))")
         DispatchQueue.main.async { [weak self] in
-            self?.onHotkey?()
+            if id == 2 { self?.onSecondaryHotkey?() }
+            else       { self?.onHotkey?() }
         }
     }
 }
@@ -98,8 +127,23 @@ private func hotKeyHandler(
     event: EventRef?,
     userData: UnsafeMutableRawPointer?
 ) -> OSStatus {
-    guard let userData = userData else { return OSStatus(eventNotHandledErr) }
+    guard let userData = userData, let event = event else {
+        return OSStatus(eventNotHandledErr)
+    }
     let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-    manager.handleHotKeyEvent()
+
+    // Read the hotkey ID from the event to dispatch to the right callback.
+    var hotKeyID = EventHotKeyID()
+    GetEventParameter(
+        event,
+        EventParamName(kEventParamDirectObject),
+        EventParamType(typeEventHotKeyID),
+        nil,
+        MemoryLayout<EventHotKeyID>.size,
+        nil,
+        &hotKeyID
+    )
+
+    manager.handleHotKeyEvent(id: hotKeyID.id)
     return noErr
 }

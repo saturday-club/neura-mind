@@ -26,6 +26,13 @@ final class ServiceContainer {
     let borderOverlayController: BorderOverlayWindowController?
     let contextRecoveryEngine: ContextRecoveryEngine?
 
+    // Phase 3 — Daily Assistant
+    let morningPlanEngine: MorningPlanEngine?
+    let windDownEngine: WindDownEngine?
+    let conversationEngine: ConversationEngine?
+    let emailContextFetcher: EmailContextFetcher?
+    let neuraMindController: NeuraMindPanelController?
+
     // API server
     private(set) var apiServer: APIServer?
 
@@ -82,6 +89,23 @@ final class ServiceContainer {
             panelController = EnrichmentPanelController(enrichmentEngine: enrichment)
             debugController = DebugWindowController(storageManager: storage)
 
+            // Phase 3 — Daily Assistant
+            let morningEngine = MorningPlanEngine(storageManager: storage, llmClient: llmClient)
+            let windDown      = WindDownEngine(storageManager: storage, llmClient: llmClient)
+            let conversation  = ConversationEngine(storageManager: storage, llmClient: llmClient)
+            let emailFetcher  = EmailContextFetcher(llmClient: llmClient)
+            morningPlanEngine     = morningEngine
+            windDownEngine        = windDown
+            conversationEngine    = conversation
+            emailContextFetcher   = emailFetcher
+            neuraMindController   = NeuraMindPanelController(
+                morningEngine: morningEngine,
+                windDownEngine: windDown,
+                conversationEngine: conversation,
+                emailFetcher: emailFetcher,
+                storageManager: storage
+            )
+
             logger.info("ServiceContainer initialized successfully")
         } catch {
             debugLog("INIT FAILED: \(error)")
@@ -98,6 +122,11 @@ final class ServiceContainer {
             focusScoreEngine = nil
             borderOverlayController = nil
             contextRecoveryEngine = nil
+            morningPlanEngine = nil
+            windDownEngine = nil
+            conversationEngine = nil
+            emailContextFetcher = nil
+            neuraMindController = nil
         }
     }
 
