@@ -2,7 +2,7 @@
 
 The average person with ADHD loses hours to context-switching and executive dysfunction. **NeuraMind** is a macOS ambient memory engine that captures, connects, and resurfaces your work context so you never lose your train of thought again.
 
-This project was built as part of the Claude Builder Club Hackathon @ IU on March 29, 2026.
+Winner of Claude Builder Club Hackathon @ IU on March 29, 2026.
 
 Demo Video: https://youtu.be/z3_eFS4P9w8
 
@@ -59,14 +59,14 @@ Perfect for anyone with ADHD, executive dysfunction, or anyone who juggles multi
 ### From Homebrew
 
 ```bash
-brew tap dsatyam09/neuramind
+brew tap saturday-club/neuramind
 brew install --cask neuramind
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/dsatyam09/NeuraMind.git
+git clone https://github.com/saturday-club/NeuraMind.git
 cd NeuraMind
 make bundle
 open .build/NeuraMind.app
@@ -100,6 +100,7 @@ When you enable Claude-powered features, NeuraMind uses your **local Claude CLI*
 ## Team
 
 Built by:
+- [Amit Subhash](https://github.com/amitsubhash)
 - [Anooshka Bajaj](https://github.com/ab490)
 - [Satyam Dubey](https://github.com/dsatyam09)
 - [Saai Vignesh Premanand](https://github.com/saaivignesh20)
@@ -113,4 +114,4 @@ Built by:
 
 ## Contributing
 
-Contributions welcome! Please open an issue or pull request on [GitHub](https://github.com/dsatyam09/NeuraMind).
+Contributions welcome! Please open an issue or pull request.
